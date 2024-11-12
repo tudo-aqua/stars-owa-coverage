@@ -1,0 +1,14 @@
+### Project ###
+/stars-reproduction-source
+/stars-reproduction-source.zip
+/analysis-result-logs
+/compared-results/*
+/serialized-results/*
+
+!serialized-results/baseline/
+!serialized-results/baseline-all/
+
+**/.gradle
+**/build
+.idea
+/.idea/
