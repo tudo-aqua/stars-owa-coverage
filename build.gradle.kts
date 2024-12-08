@@ -35,6 +35,8 @@ dependencies {
   implementation(group = "tools.aqua", name = "stars-data-av")
   implementation(group = "tools.aqua", name = "stars-importer-carla")
   implementation(group = "com.github.ajalt.clikt", name = "clikt", version = "4.4.0")
+  implementation("org.ow2.sat4j:org.ow2.sat4j.maxsat:2.3.6")
+
   detektPlugins(
       group = "io.gitlab.arturbosch.detekt", name = "detekt-rules-libraries", version = "1.23.6")
 }
