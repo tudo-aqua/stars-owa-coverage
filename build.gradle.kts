@@ -1,5 +1,5 @@
 /*
- * Copyright 2023-2024 The STARS OWA Coverage Authors
+ * Copyright 2023-2025 The STARS OWA Coverage Authors
  * SPDX-License-Identifier: Apache-2.0
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,13 +18,8 @@
 plugins {
   kotlin("jvm") version "2.1.10"
   application
-  id("io.gitlab.arturbosch.detekt") version "1.23.6"
   id("com.diffplug.spotless") version "7.0.2"
 }
-
-group = "tools.aqua"
-
-version = "0.5"
 
 repositories { mavenCentral() }
 
@@ -34,17 +29,8 @@ dependencies {
   implementation(group = "tools.aqua", name = "stars-logic-kcmftbl")
   implementation(group = "tools.aqua", name = "stars-data-av")
   implementation(group = "tools.aqua", name = "stars-importer-carla")
-  implementation(group = "com.github.ajalt.clikt", name = "clikt", version = "4.4.0")
   implementation("org.ow2.sat4j:org.ow2.sat4j.maxsat:2.3.6")
   implementation("tools.aqua:z3-turnkey:4.13.0.1")
-
-  detektPlugins(
-      group = "io.gitlab.arturbosch.detekt", name = "detekt-rules-libraries", version = "1.23.6")
-}
-
-detekt {
-  basePath = rootProject.projectDir.absolutePath
-  config.setFrom(files(rootProject.file("contrib/detekt-rules.yml")))
 }
 
 spotless {
@@ -65,73 +51,6 @@ spotless {
 
 tasks.test { useJUnitPlatform() }
 
-val reproductionTest by
-    tasks.registering(JavaExec::class) {
-      group = "verification"
-      description = "Runs the reproduction test."
-      dependsOn(tasks.run.get().taskDependencies)
-
-      mainClass.set("tools.aqua.stars.owa.coverage.Experiment")
-      classpath = sourceSets.main.get().runtimeClasspath
-      jvmArgs = listOf("-Xmx64g")
-      args =
-          listOf(
-              // Configure input
-              "--input",
-              "./stars-reproduction-source/stars-experiments-data/simulation_runs",
-
-              // Set minSegmentTicks filter
-              "--minSegmentTicks",
-              "11",
-
-              // Sort seeds
-              "--sorted",
-
-              // Save results
-              "--saveResults",
-
-              // Run reproduction mode
-              "--reproduction",
-              "baseline",
-          )
-    }
-
-val reproductionTestAll by
-    tasks.registering(JavaExec::class) {
-      group = "verification"
-      description = "Runs the reproduction test."
-      dependsOn(tasks.run.get().taskDependencies)
-
-      mainClass.set("tools.aqua.stars.owa.coverage.Experiment")
-      classpath = sourceSets.main.get().runtimeClasspath
-      jvmArgs = listOf("-Xmx64g")
-      args =
-          listOf(
-              // Configure input
-              "--input",
-              "./stars-reproduction-source/stars-experiments-data/simulation_runs",
-
-              // Set minSegmentTicks filter
-              "--minSegmentTicks",
-              "11",
-
-              // Set allEgo
-              "--allEgo",
-
-              // Sort seeds
-              "--sorted",
-
-              // Save results
-              "--saveResults",
-
-              // Run reproduction mode
-              "--reproduction",
-              "baseline-all",
-
-              // Show memory usage
-              "--showMemoryConsumption")
-    }
-
-application { mainClass.set("tools.aqua.stars.owa.coverage.Experiment") }
+application { mainClass.set("tools.aqua.stars.owa.coverage.ExperimentKt") }
 
 kotlin { jvmToolchain(17) }
