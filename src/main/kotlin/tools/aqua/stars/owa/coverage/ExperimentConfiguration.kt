@@ -37,13 +37,13 @@ import tools.aqua.stars.core.metric.metrics.postEvaluation.*
 import tools.aqua.stars.core.metric.utils.ApplicationConstantsHolder
 import tools.aqua.stars.core.metric.utils.ApplicationConstantsHolder.baselineDirectory
 import tools.aqua.stars.data.av.dataclasses.*
-import tools.aqua.stars.data.av.metrics.AverageVehiclesInEgosBlockMetric
 import tools.aqua.stars.importer.carla.CarlaSimulationRunsWrapper
 import tools.aqua.stars.importer.carla.loadSegments
 import tools.aqua.stars.owa.coverage.Experiment.EXIT_CODE_EQUAL_RESULTS
 import tools.aqua.stars.owa.coverage.Experiment.EXIT_CODE_NORMAL
 import tools.aqua.stars.owa.coverage.Experiment.EXIT_CODE_NO_RESULTS
 import tools.aqua.stars.owa.coverage.Experiment.EXIT_CODE_UNEQUAL_RESULTS
+import tools.aqua.stars.owa.coverage.metrics.UncertainValidTSCInstancesPerTSCMetric
 
 /**
  * The [ExperimentConfiguration] configures all [CliktCommand]s that can be used for this experiment
@@ -176,6 +176,16 @@ class ExperimentConfiguration : CliktCommand() {
         ValidTSCInstancesPerTSCMetric<
             Actor, TickData, Segment, TickDataUnitSeconds, TickDataDifferenceSeconds>()
 
+    val uncertainties =
+        mapOf(
+            "Must Yield" to 0.5,
+            "Oncoming traffic" to 0.5,
+            "Overtaking" to 0.5,
+            "Pedestrian Crossed" to 0.5,
+            "Has Stop Sign" to 0.5,
+            "Has Yield Sign" to 0.5,
+            "Has Red Light" to 0.5)
+
     println("Creating TSC...")
     val evaluation =
         TSCEvaluation(
@@ -187,16 +197,10 @@ class ExperimentConfiguration : CliktCommand() {
                 compareToPreviousRun = compareToPreviousRun)
             .apply {
               registerMetricProviders(
-                  TotalSegmentTickDifferencePerIdentifierMetric(),
-                  SegmentCountMetric(),
-                  AverageVehiclesInEgosBlockMetric(),
-                  TotalSegmentTickDifferenceMetric(),
                   validTSCInstancesPerProjectionMetric,
-                  InvalidTSCInstancesPerTSCMetric(),
-                  MissedTSCInstancesPerTSCMetric(),
                   MissedPredicateCombinationsPerTSCMetric(validTSCInstancesPerProjectionMetric),
-                  FailedMonitorsMetric(validTSCInstancesPerProjectionMetric),
-              )
+                  UncertainValidTSCInstancesPerTSCMetric(
+                      validTSCInstancesPerProjectionMetric, uncertainties))
               println("Run Evaluation")
               runEvaluation(segments = segments)
             }

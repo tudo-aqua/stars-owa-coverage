@@ -28,15 +28,16 @@ version = "0.5"
 
 repositories { mavenCentral() }
 
-var starsVersion = "0.5"
-
 dependencies {
   testImplementation(kotlin("test"))
-  implementation(group = "tools.aqua", name = "stars-core", version = starsVersion)
-  implementation(group = "tools.aqua", name = "stars-logic-kcmftbl", version = starsVersion)
-  implementation(group = "tools.aqua", name = "stars-data-av", version = starsVersion)
-  implementation(group = "tools.aqua", name = "stars-importer-carla", version = starsVersion)
+  implementation(group = "tools.aqua", name = "stars-core")
+  implementation(group = "tools.aqua", name = "stars-logic-kcmftbl")
+  implementation(group = "tools.aqua", name = "stars-data-av")
+  implementation(group = "tools.aqua", name = "stars-importer-carla")
   implementation(group = "com.github.ajalt.clikt", name = "clikt", version = "4.4.0")
+  implementation("org.ow2.sat4j:org.ow2.sat4j.maxsat:2.3.6")
+  implementation("tools.aqua:z3-turnkey:4.13.0.1")
+
   detektPlugins(
       group = "io.gitlab.arturbosch.detekt", name = "detekt-rules-libraries", version = "1.23.6")
 }
