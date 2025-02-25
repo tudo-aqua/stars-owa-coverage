@@ -21,9 +21,7 @@ import com.microsoft.z3.*
 
 fun main() {
   // Step 1: Initialize Z3 context and optimization solver
-  val cfg = HashMap<String, String>()
-  cfg["model"] = "true"
-  val ctx = Context(cfg)
+  val ctx = Context(mapOf("model" to "true"))
   val opt = ctx.mkOptimize()
 
   // Step 2: Define variables

@@ -17,150 +17,69 @@
 
 package tools.aqua.stars.owa.coverage
 
-import java.io.File
-import java.net.URL
-import java.nio.file.Files
-import java.nio.file.Path
-import java.nio.file.Paths
-import java.util.zip.ZipFile
-import kotlin.io.path.name
+
 import tools.aqua.stars.core.evaluation.TSCEvaluation
-import tools.aqua.stars.core.metric.metrics.evaluation.*
-import tools.aqua.stars.core.metric.metrics.postEvaluation.*
-import tools.aqua.stars.data.av.dataclasses.*
-import tools.aqua.stars.importer.carla.CarlaSimulationRunsWrapper
-import tools.aqua.stars.importer.carla.loadSegments
-import tools.aqua.stars.owa.coverage.metrics.UncertainValidTSCInstancesPerTSCMetric
+import tools.aqua.stars.core.tsc.builder.*
+import tools.aqua.stars.core.tsc.edge.TSCEdge
+import tools.aqua.stars.core.tsc.node.TSCLeafNode
+import tools.aqua.stars.data.av.dataclasses.TickDataDifferenceSeconds
+import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
+import tools.aqua.stars.owa.coverage.dataclasses.NoEntity
+import tools.aqua.stars.owa.coverage.dataclasses.SingleTickSegment
+import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
+import tools.aqua.stars.owa.coverage.metrics.ObservedInstancesMetric
+
+fun tsc(size: Int) =
+  tsc<NoEntity, UnknownTickData, SingleTickSegment, TickDataUnitSeconds, TickDataDifferenceSeconds> {
+    all("TSCRoot") {
+      repeat(size) {
+        addEdge(
+          TSCEdge(
+            condition = { td -> td.segment.tick.unknownData[it].first },
+            inverseCondition = { td -> td.segment.tick.unknownData[it].second },
+            destination = TSCLeafNode<NoEntity, UnknownTickData, SingleTickSegment, TickDataUnitSeconds, TickDataDifferenceSeconds>("Leaf $it", emptyMap(), emptyMap()) {}
+          )
+        )
+      }
+    }
+  }
+
 
 fun main() {
-  downloadAndUnzipExperimentsData()
+  val numSegments = 10
+  // Probability true/false to probability of being unknown, if true was rolled
+  val unknownProbabilities = listOf(
+    0.5 to 0.0,
+    0.5 to 0.0,
+//    0.5 to 0.1,
+//    0.5 to 0.1,
+//    0.5 to 0.5
+  )
 
-  println("Loading simulation runs...")
-  val simulationRunsWrappers = getSimulationRuns()
+  val tsc = tsc(size = unknownProbabilities.size)
+  println("TSC:\n$tsc\n")
 
-  println("Loading segments...")
-  val segments =
-      loadSegments(
-          useEveryVehicleAsEgo = false,
-          minSegmentTickCount = 11,
-          orderFilesBySeed = true,
-          simulationRunsWrappers = simulationRunsWrappers,
-      )
+  val ticks = generateTicks(probabilities = unknownProbabilities, numSegments = numSegments)
+  println(ticks.joinToString("\n") { it.toString() })
 
-  val validTSCInstancesPerProjectionMetric =
-      ValidTSCInstancesPerTSCMetric<
-          Actor, TickData, Segment, TickDataUnitSeconds, TickDataDifferenceSeconds>()
+  val segments = ticks.map { SingleTickSegment(it) }.asSequence()
 
-  val uncertainties =
-      mapOf(
-          "Must Yield" to 0.5,
-          "Oncoming traffic" to 0.5,
-          "Overtaking" to 0.5,
-          "Pedestrian Crossed" to 0.5,
-          "Has Stop Sign" to 0.5,
-          "Has Yield Sign" to 0.5,
-          "Has Red Light" to 0.5)
+  val metric = ObservedInstancesMetric()
+  TSCEvaluation(tscList = listOf(tsc)).apply {
+    registerMetricProviders(metric)
+  }.runEvaluation(segments = segments)
 
-  println("Creating TSC...")
-  TSCEvaluation(
-          tscList = tsc().buildProjections(),
-          writePlots = false,
-          writePlotDataCSV = false,
-          writeSerializedResults = false)
-      .apply {
-        registerMetricProviders(
-            validTSCInstancesPerProjectionMetric,
-            MissedPredicateCombinationsPerTSCMetric(validTSCInstancesPerProjectionMetric),
-            UncertainValidTSCInstancesPerTSCMetric(
-                validTSCInstancesPerProjectionMetric, uncertainties))
-        println("Run Evaluation")
-        runEvaluation(segments = segments)
+  println(metric.observedCertainInstanceCount.values.first())
+}
+
+private fun generateTicks(probabilities: List<Pair<Double, Double>>, numSegments: Int) : List<UnknownTickData> =
+  (0 until numSegments).map { index ->
+    UnknownTickData(
+      currentTick = TickDataUnitSeconds(index.toDouble()),
+      unknownData = probabilities.map { (probTF, probUncertain) ->
+        val valuation = Math.random() < probTF
+        val inverse = if (Math.random() < probUncertain) false else !valuation // Opposite of valuation with probability of being unknown (false, false)
+        valuation to inverse
       }
-}
-
-/**
- * Checks if the experiments data is available. Otherwise, it is downloaded and extracted to the
- * correct folder.
- */
-private fun downloadAndUnzipExperimentsData() {
-  val reproductionSourceFolderName = "stars-reproduction-source"
-  val reproductionSourceZipFile = "$reproductionSourceFolderName.zip"
-
-  if (File(reproductionSourceFolderName).exists()) {
-    println("The 'stars-reproduction-source' already exists")
-    return
+    )
   }
-
-  if (!File(reproductionSourceZipFile).exists()) {
-    println("Start with downloading the experiments data. This may take a while.")
-    URL("https://zenodo.org/record/8131947/files/stars-reproduction-source.zip?download=1")
-        .openStream()
-        .use { Files.copy(it, Paths.get(reproductionSourceZipFile)) }
-  }
-
-  check(File(reproductionSourceZipFile).exists()) {
-    "After downloading the file '$reproductionSourceZipFile' does not exist."
-  }
-
-  println("Extracting experiments data from zip file.")
-  extractZipFile(zipFile = File(reproductionSourceZipFile), outputDir = File("."))
-
-  check(File(reproductionSourceFolderName).exists()) { "Error unzipping simulation data." }
-  check(File("./$reproductionSourceFolderName").totalSpace > 0) {
-    "There was an error while downloading/extracting the simulation data. The test zip file is missing."
-  }
-}
-
-private fun getSimulationRuns(): List<CarlaSimulationRunsWrapper> =
-    File("./stars-reproduction-source/stars-experiments-data/simulation_runs").let { file ->
-      file
-          .walk()
-          .filter { it.isDirectory && it != file }
-          .toList()
-          .mapNotNull { mapFolder ->
-            var staticFile: Path? = null
-            val dynamicFiles = mutableListOf<Path>()
-            mapFolder.walk().forEach { mapFile ->
-              if (mapFile.nameWithoutExtension.contains("static_data")) {
-                staticFile = mapFile.toPath()
-              }
-              if (mapFile.nameWithoutExtension.contains("dynamic_data")) {
-                dynamicFiles.add(mapFile.toPath())
-              }
-            }
-
-            if (staticFile == null || dynamicFiles.isEmpty()) {
-              return@mapNotNull null
-            }
-
-            dynamicFiles.sortBy {
-              "_seed([0-9]{1,4})".toRegex().find(it.fileName.name)?.groups?.get(1)?.value?.toInt()
-                  ?: 0
-            }
-            return@mapNotNull CarlaSimulationRunsWrapper(staticFile, dynamicFiles)
-          }
-    }
-
-/**
- * Extract a zip file into any directory.
- *
- * @param zipFile src zip file
- * @param outputDir directory to extract into. There will be new folder with the zip's name inside
- *   [outputDir] directory.
- * @return the extracted directory i.e.
- */
-private fun extractZipFile(zipFile: File, outputDir: File): File? {
-  ZipFile(zipFile).use { zip ->
-    zip.entries().asSequence().forEach { entry ->
-      zip.getInputStream(entry).use { input ->
-        if (entry.isDirectory) File(outputDir, entry.name).also { it.mkdirs() }
-        else
-            File(outputDir, entry.name)
-                .also { it.parentFile.mkdirs() }
-                .outputStream()
-                .use { output -> input.copyTo(output) }
-      }
-    }
-  }
-  return outputDir
-}
