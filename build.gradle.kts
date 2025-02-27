@@ -16,7 +16,7 @@
  */
 
 plugins {
-  kotlin("jvm") version "2.1.10"
+  kotlin("jvm") version "2.1.0"
   application
   id("com.diffplug.spotless") version "7.0.2"
 }
@@ -28,7 +28,7 @@ dependencies {
   implementation(group = "tools.aqua", name = "stars-core")
   implementation(group = "tools.aqua", name = "stars-logic-kcmftbl")
   implementation(group = "tools.aqua", name = "stars-data-av")
-  implementation(group = "tools.aqua", name = "stars-importer-carla")
+//  implementation(group = "tools.aqua", name = "stars-importer-carla")
   implementation("org.ow2.sat4j:org.ow2.sat4j.maxsat:2.3.6")
   implementation("tools.aqua:z3-turnkey:4.13.0.1")
 }
