@@ -46,7 +46,7 @@ fun tsc(size: Int) =
 
 
 fun main() {
-  val numSegments = 10
+  val numSegments = 500
   // Probability true/false to probability of being unknown, if true was rolled
   val unknownProbabilities = listOf(
     0.5 to 0.0,
@@ -69,7 +69,7 @@ fun main() {
     registerMetricProviders(metric)
   }.runEvaluation(segments = segments)
 
-  println(metric.observedCertainInstanceCount)
+  println(metric.certainInstanceCount)
 }
 
 private fun generateTicks(probabilities: List<Pair<Double, Double>>, numSegments: Int) : List<UnknownTickData> =
