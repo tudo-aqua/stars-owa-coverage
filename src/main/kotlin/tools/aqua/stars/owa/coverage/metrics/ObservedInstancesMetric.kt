@@ -1,6 +1,9 @@
 package tools.aqua.stars.owa.coverage.metrics
 
+import tools.aqua.stars.core.metric.providers.Plottable
 import tools.aqua.stars.core.metric.providers.TSCAndTSCInstanceNodeMetricProvider
+import tools.aqua.stars.core.metric.utils.getPlot
+import tools.aqua.stars.core.metric.utils.plotDataAsLineChart
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.instance.TSCInstance
 import tools.aqua.stars.core.tsc.instance.TSCInstanceNode
@@ -19,11 +22,11 @@ typealias D = TickDataDifferenceSeconds
 //endregion
 
 class ObservedInstancesMetric:
-  TSCAndTSCInstanceNodeMetricProvider<E, T, S, U, D>
+  TSCAndTSCInstanceNodeMetricProvider<E, T, S, U, D>,
 //  Stateful,
 //  Serializable,
 //  Loggable,
-//  Plottable
+  Plottable
 {
   /** List of all observed instances including those containing unknowns */
   val observedInstances = mutableSetOf<TSCInstanceNode<E,T,S,U,D>>()
@@ -45,10 +48,9 @@ class ObservedInstancesMetric:
     tscInstance: TSCInstance<E,T,S,U,D>
   ) {
     observedInstances.add(tscInstance.rootNode) //Note: This is a set, so duplicates are ignored
-    observedInstanceCount.add(observedInstances.size)
 
     // Update "raw" observedInstanceCount
-    observedCertainInstanceCount.add(observedInstances.size)
+    observedInstanceCount.add(observedInstances.size)
 
     // Update lower bound
     observedCertainInstanceCount.add(calculateLowerBound())
@@ -70,14 +72,14 @@ class ObservedInstancesMetric:
    * Calculates MinUnCover for the observed instances.
    */
   private fun calculateMinUnCover(): Int {
-    return -1  //TODO
+    return 0  //TODO
   }
 
   /**
    * Calculates MaxUnCover for the observed instances.
    */
   private fun calculateMaxUnCover(): Int {
-    return -1  //TODO
+    return 0  //TODO
   }
 
   /**
@@ -85,4 +87,26 @@ class ObservedInstancesMetric:
    */
   private fun TSCInstanceNode<E,T,S,U,D>.containsUnknown(): Boolean =
     edges.any { it.isUnknown || it.destination.containsUnknown() }
+
+  override fun writePlots() {
+    val xValues = List(observedInstanceCount.size) { it }
+    val values: Map<String, Pair<List<Int>, List<Int>>> = mapOf(
+      //"Upper Bound" to ,
+      "Observed Certain Instances (Lower bound)" to Pair(xValues, observedCertainInstanceCount),
+      "Observed Instances (MaxUnCover)" to Pair(xValues, observedInstanceMaxUncoverCount),
+      "Observed Instances (MinUnCover)" to Pair(xValues, observedInstanceMinUncoverCount)
+    )
+
+    plotDataAsLineChart(
+      plot = getPlot(
+        nameToValuesMap = values,
+        xAxisName = "Segments",
+        yAxisName = "Instance Count",
+        legendHeader = "Legend"),
+      fileName = "plot",
+      folder = "ObservedInstancesMetric",
+    )
+  }
+
+  override fun writePlotDataCSV() {}
 }

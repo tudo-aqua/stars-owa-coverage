@@ -51,9 +51,9 @@ fun main() {
   val unknownProbabilities = listOf(
     0.5 to 0.0,
     0.5 to 0.0,
-//    0.5 to 0.1,
-//    0.5 to 0.1,
-//    0.5 to 0.5
+    0.5 to 0.1,
+    0.5 to 0.1,
+    0.5 to 0.5
   )
 
   val tsc = tsc(size = unknownProbabilities.size)
@@ -69,7 +69,7 @@ fun main() {
     registerMetricProviders(metric)
   }.runEvaluation(segments = segments)
 
-  println(metric.observedCertainInstanceCount.values.first())
+  println(metric.observedCertainInstanceCount)
 }
 
 private fun generateTicks(probabilities: List<Pair<Double, Double>>, numSegments: Int) : List<UnknownTickData> =

@@ -31,6 +31,7 @@ dependencies {
 //  implementation(group = "tools.aqua", name = "stars-importer-carla")
   implementation("org.ow2.sat4j:org.ow2.sat4j.maxsat:2.3.6")
   implementation("tools.aqua:z3-turnkey:4.13.0.1")
+  implementation(group = "org.jetbrains.lets-plot", name = "lets-plot-kotlin-jvm", version = "4.9.3" )
 }
 
 spotless {
