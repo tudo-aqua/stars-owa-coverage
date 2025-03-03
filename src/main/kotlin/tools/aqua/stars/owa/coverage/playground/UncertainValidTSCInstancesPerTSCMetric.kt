@@ -15,24 +15,24 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.owa.coverage.metrics
+package tools.aqua.stars.owa.coverage.playground
 
-//import java.util.logging.Logger
-//import kotlin.random.Random
-//import tools.aqua.stars.core.metric.metrics.evaluation.ValidTSCInstancesPerTSCMetric
-//import tools.aqua.stars.core.metric.providers.Loggable
-//import tools.aqua.stars.core.metric.providers.PostEvaluationMetricProvider
-//import tools.aqua.stars.core.tsc.TSC
-//import tools.aqua.stars.core.tsc.instance.TSCInstance
-//import tools.aqua.stars.core.tsc.instance.TSCInstanceNode
-//import tools.aqua.stars.core.types.EntityType
-//import tools.aqua.stars.core.types.SegmentType
-//import tools.aqua.stars.core.types.TickDataType
-//import tools.aqua.stars.core.types.TickDifference
-//import tools.aqua.stars.core.types.TickUnit
-//import tools.aqua.stars.owa.coverage.tsc.TSCUncertainInstanceNode
+// import java.util.logging.Logger
+// import kotlin.random.Random
+// import tools.aqua.stars.core.metric.metrics.evaluation.ValidTSCInstancesPerTSCMetric
+// import tools.aqua.stars.core.metric.providers.Loggable
+// import tools.aqua.stars.core.metric.providers.PostEvaluationMetricProvider
+// import tools.aqua.stars.core.tsc.TSC
+// import tools.aqua.stars.core.tsc.instance.TSCInstance
+// import tools.aqua.stars.core.tsc.instance.TSCInstanceNode
+// import tools.aqua.stars.core.types.EntityType
+// import tools.aqua.stars.core.types.SegmentType
+// import tools.aqua.stars.core.types.TickDataType
+// import tools.aqua.stars.core.types.TickDifference
+// import tools.aqua.stars.core.types.TickUnit
+// import tools.aqua.stars.owa.coverage.tsc.TSCUncertainInstanceNode
 //
-//class UncertainValidTSCInstancesPerTSCMetric<
+// class UncertainValidTSCInstancesPerTSCMetric<
 //    E : EntityType<E, T, S, U, D>,
 //    T : TickDataType<E, T, S, U, D>,
 //    S : SegmentType<E, T, S, U, D>,
@@ -42,7 +42,7 @@ package tools.aqua.stars.owa.coverage.metrics
 //    val uncertainties: Map<String, Double>,
 //    override val loggerIdentifier: String = "uncertainties",
 //    override val logger: Logger = Loggable.getLogger(loggerIdentifier)
-//) : PostEvaluationMetricProvider<E, T, S, U, D>, Loggable {
+// ) : PostEvaluationMetricProvider<E, T, S, U, D>, Loggable {
 //
 //  private var uncertainInstances:
 //      Map<
@@ -99,4 +99,4 @@ package tools.aqua.stars.owa.coverage.metrics
 //      logFine()
 //    }
 //  }
-//}
+// }
