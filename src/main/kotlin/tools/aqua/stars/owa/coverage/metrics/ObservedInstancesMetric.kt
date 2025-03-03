@@ -64,17 +64,19 @@ class ObservedInstancesMetric:
     // Update "raw" observedInstanceCount
     observedInstanceCount.add(observedInstances.size)
 
+    val powerLists = observedInstances.map { it to powerList(it) }
+
     // Update lower bound
     certainInstanceCount.add(calculateLowerBound())
 
     // Update upper bound
-    possibleInstanceCount.add(calculateUpperBound())
+    possibleInstanceCount.add(calculateUpperBound(powerLists))
 
     // Update minUnCover
-    minUncoverCount.add(calculateMinUnCover())
+    minUncoverCount.add(calculateMinUnCover(powerLists))
 
     // Update maxUnCover
-    maxUncoverCount.add(calculateMaxUnCover())
+    maxUncoverCount.add(calculateMaxUnCover(powerLists))
   }
 
   /**
@@ -86,12 +88,12 @@ class ObservedInstancesMetric:
   /**
    * Calculates the upper bound of the observed instances by replacing unknowns with both options.
    */
-  private fun calculateUpperBound(): Int = observedInstances.map { powerList(it) }.flatten().toSet().size
+  private fun calculateUpperBound(powerLists: List<Pair<Bitmask, List<Bitmask>>>): Int = powerLists.map { it.second }.flatten().toSet().size
 
   /**
    * Calculates MinUnCover for the observed instances.
    */
-  private fun calculateMinUnCover(): Int {
+  private fun calculateMinUnCover(powerLists: List<Pair<Bitmask, List<Bitmask>>>): Int {
     // Initialize Z3 context and optimization solver
     val ctx = Context(mapOf("model" to "true"))
     val opt = ctx.mkOptimize()
@@ -99,9 +101,9 @@ class ObservedInstancesMetric:
     val variables = mutableMapOf<Bitmask, BoolExpr>()
 
     // Iterate observed instances
-    for (instance in observedInstances) {
+    for (instance in powerLists) {
       // Blow up the instance to all possible options by replacing unknowns with both options
-      var powerList = powerList(instance)
+      var powerList = instance.second
 
       // Create a disjunction of all options. Reuse existing variables if already created
       val options = mutableListOf<BoolExpr>()
@@ -130,7 +132,7 @@ class ObservedInstancesMetric:
   /**
    * Calculates MaxUnCover for the observed instances.
    */
-  private fun calculateMaxUnCover(): Int {
+  private fun calculateMaxUnCover(powerLists: List<Pair<Bitmask, List<Bitmask>>>): Int {
     return 0  //TODO
   }
 
