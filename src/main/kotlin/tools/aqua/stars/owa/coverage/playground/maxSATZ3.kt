@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-package tools.aqua.stars.owa.coverage
+package tools.aqua.stars.owa.coverage.playground
 
 import com.microsoft.z3.*
 
