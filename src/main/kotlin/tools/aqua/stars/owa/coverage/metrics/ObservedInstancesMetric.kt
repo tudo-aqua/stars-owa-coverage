@@ -3,6 +3,10 @@ package tools.aqua.stars.owa.coverage.metrics
 import com.microsoft.z3.BoolExpr
 import com.microsoft.z3.Context
 import com.microsoft.z3.Status
+import org.jgrapht.Graph
+import org.jgrapht.alg.matching.SparseEdmondsMaximumCardinalityMatching
+import org.jgrapht.graph.DefaultEdge
+import org.jgrapht.graph.SimpleGraph
 import tools.aqua.stars.core.metric.providers.Plottable
 import tools.aqua.stars.core.metric.providers.SegmentMetricProvider
 import tools.aqua.stars.core.metric.utils.getPlot
@@ -133,7 +137,30 @@ class ObservedInstancesMetric:
    * Calculates MaxUnCover for the observed instances.
    */
   private fun calculateMaxUnCover(powerLists: List<Pair<Bitmask, List<Bitmask>>>): Int {
-    return 0  //TODO
+    // Create an undirected simple graph
+    val graph: Graph<String, DefaultEdge> = SimpleGraph(DefaultEdge::class.java)
+
+    // Add vertices for the observed instances
+    powerLists.map { it.first }.forEach { graph.addVertex("o$it") }
+
+    // Add vertices for the possible instances
+    powerLists.map { it.second }.flatten().toSet().forEach { graph.addVertex("$it") }
+
+    // Add edges between observed and possible instances
+    for(instance in powerLists) {
+      val original = instance.first
+      val powerlist = instance.second
+
+      // Add edges from the observed instance containing unknowns to the possible instances
+      for (possibleInstance in powerlist) {
+        graph.addEdge("o$original", "$possibleInstance")
+      }
+    }
+
+    // Compute the maximum cardinality matching
+    val matching = SparseEdmondsMaximumCardinalityMatching(graph)
+
+    return matching.matching.edges.size
   }
 
   /**
