@@ -53,7 +53,7 @@ typealias Bitmask = List<Valuation>
 // endregion
 
 /** @param sampleSize Number of segments to evaluate before updating the metric. */
-class ObservedInstancesMetric(val sampleSize: Int = 1) :
+class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
     SegmentMetricProvider<E, T, S, U, D>,
     //  Stateful,
     //  Serializable,
@@ -67,11 +67,14 @@ class ObservedInstancesMetric(val sampleSize: Int = 1) :
   /** Counts of all observed instances including those containing unknowns. */
   val observedInstanceCount = mutableListOf<Int>()
 
-  /** Counts of all observed certain instances. */
+  /** Counts of all observed certain instances (Lower bound). */
   val certainInstanceCount = mutableListOf<Int>()
 
-  /** Counts of all possible instances by replacing unknowns with both options . */
+  /** Counts of all possible instances by replacing unknowns with both options (Upper bound). */
   val possibleInstanceCount = mutableListOf<Int>()
+
+  /** Counts of all observed instances with their real value. */
+  val realValueInstanceCount = mutableListOf<Int>()
 
   /** Counts of all observed scenarios when assuming best possible choice for each unknown. */
   val maxUncoverCount = mutableListOf<Int>()
@@ -97,6 +100,9 @@ class ObservedInstancesMetric(val sampleSize: Int = 1) :
       // Update upper bound
       possibleInstanceCount.add(calculateUpperBound(powerLists))
 
+      // Update realValueInstanceCount
+      realValueInstanceCount.add(calculateRealValue())
+
       // Update minUnCover
       minUncoverCount.add(calculateMinUnCover(powerLists))
 
@@ -104,7 +110,13 @@ class ObservedInstancesMetric(val sampleSize: Int = 1) :
       maxUncoverCount.add(calculateMaxUnCover(powerLists))
 
       print(
-          "\rSegment $evaluatedInstances | UB: ${possibleInstanceCount.last()} | MaxUC: ${maxUncoverCount.last()} | MinUC: ${minUncoverCount.last()} | LB: ${certainInstanceCount.last()} | Max: $maxSize")
+          "\rSegment $evaluatedInstances " +
+              "| UB: ${possibleInstanceCount.last()} " +
+              "| MaxUC: ${maxUncoverCount.last()} " +
+              "| Real: ${realValueInstanceCount.last()} " +
+              "| MinUC: ${minUncoverCount.last()} " +
+              "| LB: ${certainInstanceCount.last()} " +
+              "| Max: $maxSize")
     }
   }
 
@@ -119,6 +131,10 @@ class ObservedInstancesMetric(val sampleSize: Int = 1) :
    */
   private fun calculateUpperBound(powerLists: List<Pair<Bitmask, List<Bitmask>>>): Int =
       powerLists.map { it.second }.flatten().toSet().size
+
+  /** Calculates the count of distinct observed instances by their real values. */
+  private fun calculateRealValue(): Int =
+      observedInstances.map { it.map { t -> t.realValue } }.toSet().size
 
   /** Calculates MinUnCover for the observed instances. */
   private fun calculateMinUnCover(powerLists: List<Pair<Bitmask, List<Bitmask>>>): Int {
@@ -219,47 +235,33 @@ class ObservedInstancesMetric(val sampleSize: Int = 1) :
 
   override fun writePlots() {
     val xValues = List(certainInstanceCount.size) { it * sampleSize }
-    val valuesWithObserved: Map<String, Pair<List<Int>, List<Int>>> =
-        mapOf(
-            // "Upper Bound" to ,
-            "Observed Instances" to
-                Pair(
-                    xValues,
-                    observedInstanceCount.filterIndexed { index, _ -> index % sampleSize == 0 }),
-            "Observed Certain Instances (Lower bound)" to Pair(xValues, certainInstanceCount),
-            "Observed Possible Instances (Upper bound)" to Pair(xValues, possibleInstanceCount),
-            "Observed Instances (MaxUnCover)" to Pair(xValues, maxUncoverCount),
-            "Observed Instances (MinUnCover)" to Pair(xValues, minUncoverCount))
 
-    val valuesWithoutObserved: Map<String, Pair<List<Int>, List<Int>>> =
+    val values: Map<String, Pair<List<Int>, List<Int>>> =
         mapOf(
             // "Upper Bound" to ,
             "Observed Certain Instances (Lower bound)" to Pair(xValues, certainInstanceCount),
             "Observed Possible Instances (Upper bound)" to Pair(xValues, possibleInstanceCount),
+            "Observed real values" to Pair(xValues, realValueInstanceCount),
             "Observed Instances (MaxUnCover)" to Pair(xValues, maxUncoverCount),
             "Observed Instances (MinUnCover)" to Pair(xValues, minUncoverCount))
 
-    plotDataAsLineChart(
-        plot =
-            getPlot(
-                nameToValuesMap = valuesWithObserved,
-                xAxisName = "Segments",
-                yAxisName = "Instance Count",
-                legendHeader = "Legend"),
-        fileName = "plot_with_observed",
-        folder = "ObservedInstancesMetric",
-    )
+    repeat(4) {
+      val logX = it % 2 == 1
+      val logY = it >= 2
 
-    plotDataAsLineChart(
-        plot =
-            getPlot(
-                nameToValuesMap = valuesWithoutObserved,
-                xAxisName = "Segments",
-                yAxisName = "Instance Count",
-                legendHeader = "Legend"),
-        fileName = "plot_without_observed",
-        folder = "ObservedInstancesMetric",
-    )
+      plotDataAsLineChart(
+          plot =
+              getPlot(
+                  nameToValuesMap = values,
+                  xAxisName = "Segments",
+                  yAxisName = "Instance Count",
+                  legendHeader = "Legend"),
+          logScaleX = logX,
+          logScaleY = logY,
+          fileName = "plot${if (logX) "_logX" else ""}${if (logY) "_logY" else ""}",
+          folder = "ObservedInstancesMetric",
+      )
+    }
   }
 
   override fun writePlotDataCSV() {}
