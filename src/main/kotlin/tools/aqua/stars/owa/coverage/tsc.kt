@@ -24,33 +24,17 @@ import tools.aqua.stars.core.tsc.node.TSCLeafNode
 import tools.aqua.stars.data.av.dataclasses.TickDataDifferenceSeconds
 import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
 import tools.aqua.stars.owa.coverage.dataclasses.NoEntity
-import tools.aqua.stars.owa.coverage.dataclasses.SingleTickSegment
 import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 
-fun tsc(
-    size: Int
-): TSC<
-    NoEntity, UnknownTickData, SingleTickSegment, TickDataUnitSeconds, TickDataDifferenceSeconds> =
-    tsc<
-        NoEntity,
-        UnknownTickData,
-        SingleTickSegment,
-        TickDataUnitSeconds,
-        TickDataDifferenceSeconds> {
+fun tsc(size: Int): TSC<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds> =
+    tsc {
       all("TSCRoot") {
         repeat(size) {
           addEdge(
               TSCEdge(
-                  condition = { td -> td.segment.tick.unknownData[it].condition },
-                  inverseCondition = { td -> td.segment.tick.unknownData[it].inverseCondition },
-                  destination =
-                      TSCLeafNode<
-                          NoEntity,
-                          UnknownTickData,
-                          SingleTickSegment,
-                          TickDataUnitSeconds,
-                          TickDataDifferenceSeconds>(
-                          "Leaf $it", emptyMap(), emptyMap()) {}))
+                  condition = { td -> td.unknownData[it].condition },
+                  inverseCondition = { td -> td.unknownData[it].inverseCondition },
+                  destination = TSCLeafNode("Leaf $it", emptyMap(), emptyMap()) {}))
         }
       }
     }

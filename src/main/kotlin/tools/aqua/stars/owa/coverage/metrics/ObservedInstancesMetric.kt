@@ -23,43 +23,28 @@ import com.microsoft.z3.Status
 import kotlin.collections.indexOfFirst
 import kotlin.collections.toMutableList
 import org.jgrapht.Graph
+import org.jgrapht.alg.matching.HopcroftKarpMaximumCardinalityBipartiteMatching
 import org.jgrapht.alg.matching.SparseEdmondsMaximumCardinalityMatching
 import org.jgrapht.graph.DefaultEdge
 import org.jgrapht.graph.SimpleGraph
-import tools.aqua.stars.core.metric.providers.Plottable
-import tools.aqua.stars.core.metric.providers.SegmentMetricProvider
+import tools.aqua.stars.core.metric.metrics.providers.Plottable
+import tools.aqua.stars.core.metric.metrics.providers.TickMetricProvider
 import tools.aqua.stars.core.metric.utils.getPlot
 import tools.aqua.stars.core.metric.utils.plotDataAsLineChart
 import tools.aqua.stars.data.av.dataclasses.TickDataDifferenceSeconds
 import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
 import tools.aqua.stars.owa.coverage.dataclasses.NoEntity
-import tools.aqua.stars.owa.coverage.dataclasses.SingleTickSegment
 import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 import tools.aqua.stars.owa.coverage.dataclasses.Valuation
 
-// region typealiases
-typealias E = NoEntity
-
-typealias T = UnknownTickData
-
-typealias S = SingleTickSegment
-
-typealias U = TickDataUnitSeconds
-
-typealias D = TickDataDifferenceSeconds
-
 typealias Bitmask = List<Valuation>
-
-// endregion
 
 /** @param sampleSize Number of segments to evaluate before updating the metric. */
 class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
-    SegmentMetricProvider<E, T, S, U, D>,
-    //  Stateful,
-    //  Serializable,
-    //  Loggable,
+    TickMetricProvider<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds>,
     Plottable {
   private var evaluatedInstances: Int = 0
+  private val t0 = System.currentTimeMillis()
 
   /** List of all observed instances including those containing unknowns */
   val observedInstances = mutableSetOf<Bitmask>()
@@ -82,9 +67,22 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
   /** Counts of all observed scenarios when assuming worst possible choice for each unknown. */
   val minUncoverCount = mutableListOf<Int>()
 
-  override fun evaluate(segment: SingleTickSegment) {
-    observedInstances.add(
-        segment.tick.unknownData) // Note: This is a set, so duplicates are ignored
+  /** Time spent in MaxSAT solver. */
+  var timeInMaxSAT = mutableListOf(0L)
+
+  val gap: Double
+    get() =
+        (possibleInstanceCount.last() - certainInstanceCount.last()) /
+            possibleInstanceCount.last().toDouble() * 100
+
+  /** Time spent in SparseEdmondsMaximumCardinalityMatching solver. */
+  var timeInSparseEdmondsMaximumCardinalityMatching = mutableListOf(0L)
+
+  /** Time spent in Hopcroft-Karp Maximum Cardinality Bipartite Matching solver. */
+  var timeInHopcroftKarpMaximumCardinalityBipartiteMatching = mutableListOf(0L)
+
+  override fun evaluate(tick: UnknownTickData) {
+    observedInstances.add(tick.unknownData) // Note: This is a set, so duplicates are ignored
     evaluatedInstances++
 
     // Update "raw" observedInstanceCount
@@ -107,16 +105,29 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
       minUncoverCount.add(calculateMinUnCover(powerLists))
 
       // Update maxUnCover
-      maxUncoverCount.add(calculateMaxUnCover(powerLists))
+      val max1 = calculateMaxUnCoverUsingSparseEdmonds(powerLists)
+      val max2 = calculateMaxUnCoverUsingHopcroftKarp(powerLists)
+      check(max1 == max2) {
+        "MaxUnCover using SparseEdmonds and Hopcroft-Karp should return the same result, but got $max1 and $max2"
+      }
+      maxUncoverCount.add(max1)
 
+      val t = (System.currentTimeMillis() - t0) / 1000.0
+      val tMaxSat = timeInMaxSAT.sum() / 1000.0
+      val tSparse = timeInSparseEdmondsMaximumCardinalityMatching.sum() / 1000.0
+      val tHopcroft = timeInHopcroftKarpMaximumCardinalityBipartiteMatching.sum() / 1000.0
       print(
-          "\rSegment $evaluatedInstances " +
+          "\rTick: $evaluatedInstances " +
               "| UB: ${possibleInstanceCount.last()} " +
               "| MaxUC: ${maxUncoverCount.last()} " +
               "| Real: ${realValueInstanceCount.last()} " +
               "| MinUC: ${minUncoverCount.last()} " +
               "| LB: ${certainInstanceCount.last()} " +
-              "| Max: $maxSize")
+              "| Max: $maxSize " +
+              "  ||   Gap: ${String.format("%.2f", gap)} % " +
+              "  ||   Time: ${String.format("%.2f", t)} s" +
+              "| MaxSat: $tMaxSat s (${String.format("%.2f", tMaxSat * 100 / t)} %) " +
+              "| Time in MaxCardinality (Sparse / Hopcroft-Karp): $tSparse s (${String.format("%.2f", tSparse * 100 / t)} %) / $tHopcroft s (${String.format("%.2f", tHopcroft * 100 / t)} %)")
     }
   }
 
@@ -138,6 +149,8 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
 
   /** Calculates MinUnCover for the observed instances. */
   private fun calculateMinUnCover(powerLists: List<Pair<Bitmask, List<Bitmask>>>): Int {
+    val t0 = System.currentTimeMillis()
+
     // Initialize Z3 context and optimization solver
     val ctx = Context(mapOf("model" to "true"))
     val opt = ctx.mkOptimize()
@@ -147,7 +160,7 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
     // Iterate observed instances
     for (instance in powerLists) {
       // Blow up the instance to all possible options by replacing unknowns with both options
-      var powerList = instance.second
+      val powerList = instance.second
 
       // Create a disjunction of all options. Reuse existing variables if already created
       val options = mutableListOf<BoolExpr>()
@@ -168,21 +181,60 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
     return when (opt.Check()) {
       // Return the count of variables that are true in the model
       Status.SATISFIABLE -> variables.values.count { opt.model.eval(it, true).isTrue }
-      Status.UNSATISFIABLE -> -2
-      Status.UNKNOWN -> -1
-    }.also { ctx.close() }
+      Status.UNSATISFIABLE -> (-2).also { System.err.println("MaxSat returned UNSATISFIABLE!") }
+      Status.UNKNOWN -> (-1).also { System.err.println("MaxSat returned UNKNOWN!") }
+    }.also {
+      ctx.close()
+      timeInMaxSAT += (System.currentTimeMillis() - t0)
+    }
   }
 
   /** Calculates MaxUnCover for the observed instances. */
-  private fun calculateMaxUnCover(powerLists: List<Pair<Bitmask, List<Bitmask>>>): Int {
+  private fun calculateMaxUnCoverUsingSparseEdmonds(
+      powerLists: List<Pair<Bitmask, List<Bitmask>>>
+  ): Int {
+    val t0 = System.currentTimeMillis()
+
+    val (graph, _, _) = createGraph(powerLists)
+
+    // Compute the maximum cardinality matching
+    val matching = SparseEdmondsMaximumCardinalityMatching(graph)
+
+    return matching.matching.edges.size.also {
+      timeInSparseEdmondsMaximumCardinalityMatching += (System.currentTimeMillis() - t0)
+    }
+  }
+
+  /** Calculates MaxUnCover for the observed instances. */
+  private fun calculateMaxUnCoverUsingHopcroftKarp(
+      powerLists: List<Pair<Bitmask, List<Bitmask>>>
+  ): Int {
+    val t0 = System.currentTimeMillis()
+
+    val (graph, partition1, partition2) = createGraph(powerLists)
+
+    // Compute the maximum cardinality matching
+    val matching = HopcroftKarpMaximumCardinalityBipartiteMatching(graph, partition1, partition2)
+
+    return matching.matching.edges.size.also {
+      timeInHopcroftKarpMaximumCardinalityBipartiteMatching += (System.currentTimeMillis() - t0)
+    }
+  }
+
+  /** Creates the bipartite graph for the Maximum Cardinality Matching */
+  private fun createGraph(
+      powerLists: List<Pair<Bitmask, List<Bitmask>>>
+  ): Triple<Graph<String, DefaultEdge>, Set<String>, Set<String>> {
     // Create an undirected simple graph
     val graph: Graph<String, DefaultEdge> = SimpleGraph(DefaultEdge::class.java)
 
     // Add vertices for the observed instances
-    powerLists.map { it.first }.forEach { graph.addVertex("o$it") }
+    val partition1 = powerLists.map { "o${it.first}" }.toSet()
+    partition1.forEach { graph.addVertex(it) }
 
     // Add vertices for the possible instances
-    powerLists.map { it.second }.flatten().toSet().forEach { graph.addVertex("$it") }
+    val partition2 = powerLists.map { it.second }.flatten().map { it.toString() }.toSet()
+    partition2.forEach { graph.addVertex(it) }
 
     // Add edges between observed and possible instances
     for (instance in powerLists) {
@@ -195,10 +247,7 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
       }
     }
 
-    // Compute the maximum cardinality matching
-    val matching = SparseEdmondsMaximumCardinalityMatching(graph)
-
-    return matching.matching.edges.size
+    return Triple(graph, partition1, partition2)
   }
 
   /** Checks if the given List of conditions contains any unknowns. */
@@ -219,11 +268,19 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
       for (item in powerList) {
         newPowerList.add(
             item.toMutableList().apply {
-              this[unknownIndex] = Valuation(true, false, this[unknownIndex].realValue)
+              this[unknownIndex] =
+                  Valuation(
+                      condition = true,
+                      inverseCondition = false,
+                      realValue = this[unknownIndex].realValue)
             })
         newPowerList.add(
             item.toMutableList().apply {
-              this[unknownIndex] = Valuation(false, true, this[unknownIndex].realValue)
+              this[unknownIndex] =
+                  Valuation(
+                      condition = false,
+                      inverseCondition = true,
+                      realValue = this[unknownIndex].realValue)
             })
       }
 
@@ -234,16 +291,21 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
   }
 
   override fun writePlots() {
+    plotData()
+    plotSolverTime()
+  }
+
+  private fun plotData() {
     val xValues = List(certainInstanceCount.size) { it * sampleSize }
 
     val values: Map<String, Pair<List<Int>, List<Int>>> =
         mapOf(
             // "Upper Bound" to ,
-            "Observed Certain Instances (Lower bound)" to Pair(xValues, certainInstanceCount),
             "Observed Possible Instances (Upper bound)" to Pair(xValues, possibleInstanceCount),
-            "Observed real values" to Pair(xValues, realValueInstanceCount),
             "Observed Instances (MaxUnCover)" to Pair(xValues, maxUncoverCount),
-            "Observed Instances (MinUnCover)" to Pair(xValues, minUncoverCount))
+            "Observed real values" to Pair(xValues, realValueInstanceCount),
+            "Observed Instances (MinUnCover)" to Pair(xValues, minUncoverCount),
+            "Observed Certain Instances (Lower bound)" to Pair(xValues, certainInstanceCount))
 
     repeat(4) {
       val logX = it % 2 == 1
@@ -253,12 +315,43 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
           plot =
               getPlot(
                   nameToValuesMap = values,
-                  xAxisName = "Segments",
+                  xAxisName = "Ticks",
                   yAxisName = "Instance Count",
                   legendHeader = "Legend"),
           logScaleX = logX,
           logScaleY = logY,
           fileName = "plot${if (logX) "_logX" else ""}${if (logY) "_logY" else ""}",
+          folder = "ObservedInstancesMetric",
+      )
+    }
+  }
+
+  private fun plotSolverTime() {
+    val xValues = List(timeInMaxSAT.size) { it * sampleSize }
+
+    val values: Map<String, Pair<List<Int>, List<Long>>> =
+        mapOf(
+            // "Upper Bound" to ,
+            "MaxSat using Z3" to Pair(xValues, timeInMaxSAT),
+            "Maximum Cardinality Matching using Sparse Edmonds" to
+                Pair(xValues, timeInSparseEdmondsMaximumCardinalityMatching),
+            "Maximum Cardinality Matching using Hopcroft-Karp" to
+                Pair(xValues, timeInHopcroftKarpMaximumCardinalityBipartiteMatching))
+
+    repeat(4) {
+      val logX = it % 2 == 1
+      val logY = it >= 2
+
+      plotDataAsLineChart(
+          plot =
+              getPlot(
+                  nameToValuesMap = values,
+                  xAxisName = "Ticks",
+                  yAxisName = "Time in ms",
+                  legendHeader = "Legend"),
+          logScaleX = logX,
+          logScaleY = logY,
+          fileName = "timePlot${if (logX) "_logX" else ""}${if (logY) "_logY" else ""}",
           folder = "ObservedInstancesMetric",
       )
     }

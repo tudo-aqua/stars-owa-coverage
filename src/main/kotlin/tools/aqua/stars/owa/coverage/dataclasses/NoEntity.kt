@@ -21,12 +21,16 @@ import tools.aqua.stars.core.types.EntityType
 import tools.aqua.stars.data.av.dataclasses.TickDataDifferenceSeconds
 import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
 
-class NoEntity(override val tickData: UnknownTickData) :
-    EntityType<
-        NoEntity,
-        UnknownTickData,
-        SingleTickSegment,
-        TickDataUnitSeconds,
-        TickDataDifferenceSeconds> {
-  override val id: Int = -1
+class NoEntity(val tickData: UnknownTickData) :
+    EntityType<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds>() {
+
+  val id: Int = -1
+
+  override fun equals(other: Any?): Boolean {
+    if (this === other) return true
+    if (other !is NoEntity) return false
+    return id == other.id && tickData == other.tickData
+  }
+
+  override fun hashCode(): Int = id * 31 + tickData.hashCode()
 }

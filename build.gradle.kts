@@ -16,7 +16,7 @@
  */
 
 plugins {
-  kotlin("jvm") version "2.1.0"
+  kotlin("jvm") version "2.2.0"
   application
   id("com.diffplug.spotless") version "7.0.2"
 }
@@ -56,4 +56,4 @@ tasks.test { useJUnitPlatform() }
 
 application { mainClass.set("tools.aqua.stars.owa.coverage.ExperimentKt") }
 
-kotlin { jvmToolchain(17) }
+kotlin { jvmToolchain(21) }

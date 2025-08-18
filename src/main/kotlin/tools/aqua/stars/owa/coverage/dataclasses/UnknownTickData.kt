@@ -21,22 +21,16 @@ import tools.aqua.stars.core.types.TickDataType
 import tools.aqua.stars.data.av.dataclasses.TickDataDifferenceSeconds
 import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
 
-class UnknownTickData(
-    override val currentTick: TickDataUnitSeconds,
-    val unknownData: List<Valuation>
-) :
-    TickDataType<
-        NoEntity,
-        UnknownTickData,
-        SingleTickSegment,
-        TickDataUnitSeconds,
-        TickDataDifferenceSeconds> {
-  override var entities: List<NoEntity> = emptyList()
-  override lateinit var segment: SingleTickSegment
+class UnknownTickData(currentTick: TickDataUnitSeconds, val unknownData: List<Valuation>) :
+    TickDataType<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds>(
+        currentTick) {
+
+  override val ego: NoEntity
+    get() = throw UnsupportedOperationException("UnknownTickData does not have an ego entity")
 
   override fun toString(): String =
       unknownData.joinToString(
-          prefix = "${currentTick.tickSeconds.toInt()}: [", separator = ", ", postfix = "]") {
+          prefix = "${currentTickUnit.tickSeconds.toInt()}: [", separator = ", ", postfix = "]") {
             it.toString()
           }
 }
