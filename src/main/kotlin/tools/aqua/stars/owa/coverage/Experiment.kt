@@ -28,24 +28,21 @@ import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 import tools.aqua.stars.owa.coverage.dataclasses.Valuation
 import tools.aqua.stars.owa.coverage.metrics.ObservedInstancesMetric
 
-fun main() {
-  val maxTicks = 1_000_000
+fun main(args: Array<String>) {
+  val numTags = args.getOrNull(0)?.toIntOrNull() ?: 10
+  val maxTicks = args.getOrNull(1)?.toIntOrNull() ?: 1_000_000
   val sampleSize = maxTicks / 1000
+
   // Probability true/false to probability of being unknown, if true was rolled. The real value in
   // case of unknown is calculated by the first probability again.
-  val unknownProbabilities =
-      listOf(
-          0.5 to 0.0,
-          0.5 to 0.0,
-          0.5 to 0.1,
-          0.5 to 0.1,
-          0.5 to 0.1,
-          0.5 to 0.1,
-          0.1 to 0.1,
-          0.1 to 0.1,
-          0.5 to 0.5,
-          0.5 to 0.5,
-      )
+  val unknownProbabilities = mutableListOf<Pair<Double, Double>>()
+
+  repeat(numTags) {
+    val probTF = Random.nextDouble(0.0, 1.0)
+    val probUncertain = if(Random.nextBoolean()) 0.0 else Random.nextDouble(0.0, 0.5)
+    unknownProbabilities.add(probTF to probUncertain)
+  }
+
   val maxSize = (2.0).pow(unknownProbabilities.size.toDouble()).toInt()
 
   val tsc = tsc(size = unknownProbabilities.size)
