@@ -106,7 +106,6 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
       realValueInstanceCount.add(calculateRealValue())
 
       // Update minUnCover
-      println("Calculating MinUnCover for ${powerLists.size} observed instances...")
       if (minUncoverCount.lastOrNull() == maxSize) {
         minUncoverCount.add(maxSize)
         timeInMinSAT.add(0L)
@@ -115,7 +114,6 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
       }
 
       // Update maxUnCover
-      println("Calculating MaxUnCover for ${powerLists.size} observed instances...")
       if (maxUncoverCount.lastOrNull() == maxSize) {
         maxUncoverCount.add(maxSize)
         timeInSparseEdmondsMaximumCardinalityMatching.add(0L)
@@ -142,7 +140,7 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
       val tSparse = timeInSparseEdmondsMaximumCardinalityMatching.sum() / 1000.0
       val tHopcroft = timeInHopcroftKarpMaximumCardinalityBipartiteMatching.sum() / 1000.0
       println(
-          "Tick: $evaluatedInstances " +
+          "\rTick: $evaluatedInstances " +
               "| UB: ${possibleInstanceCount.last()} " +
               "| MaxUC: ${maxUncoverCount.last()} " +
               "| Real: ${realValueInstanceCount.last()} " +
