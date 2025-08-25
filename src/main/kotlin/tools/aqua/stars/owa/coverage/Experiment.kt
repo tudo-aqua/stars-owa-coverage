@@ -33,6 +33,8 @@ fun main(args: Array<String>) {
   val maxTicks = args.getOrNull(1)?.toIntOrNull() ?: 1_000_000
   val sampleSize = maxTicks / 1000
 
+  println("Run configuration: numTags=$numTags, maxTicks=$maxTicks, sampleSize=$sampleSize")
+
   // Probability true/false to probability of being unknown, if true was rolled. The real value in
   // case of unknown is calculated by the first probability again.
   val unknownProbabilities = mutableListOf<Pair<Double, Double>>()
