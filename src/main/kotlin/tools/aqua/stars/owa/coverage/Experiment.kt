@@ -56,7 +56,7 @@ fun main() {
       .apply {
         clearHooks()
         registerMetricProviders(metric)
-        registerPreSegmentEvaluationHooks(
+        registerPreTickEvaluationHooks(
             PreTickEvaluationHook("AbortHook") {
               if ((metric.minUncoverCount.lastOrNull() ?: 0) < maxSize) EvaluationHookResult.OK
               else EvaluationHookResult.CANCEL

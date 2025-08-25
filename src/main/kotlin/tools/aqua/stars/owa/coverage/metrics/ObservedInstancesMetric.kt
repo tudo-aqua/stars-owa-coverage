@@ -40,6 +40,7 @@ import tools.aqua.stars.owa.coverage.dataclasses.Valuation
 typealias Bitmask = List<Valuation>
 
 /** @param sampleSize Number of segments to evaluate before updating the metric. */
+@Suppress("DuplicatedCode")
 class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
     TickMetricProvider<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds>,
     Plottable {
@@ -67,13 +68,16 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
   /** Counts of all observed scenarios when assuming worst possible choice for each unknown. */
   val minUncoverCount = mutableListOf<Int>()
 
-  /** Time spent in MaxSAT solver. */
-  var timeInMaxSAT = mutableListOf(0L)
-
   val gap: Double
     get() =
         (possibleInstanceCount.last() - certainInstanceCount.last()) /
             possibleInstanceCount.last().toDouble() * 100
+
+  /** Time spent in MaxSAT solver for MaxUnCover. */
+  var timeInMaxSAT = mutableListOf(0L)
+
+  /** Time spent in MaxSAT solver for MinUnCover. */
+  var timeInMinSAT = mutableListOf(0L)
 
   /** Time spent in SparseEdmondsMaximumCardinalityMatching solver. */
   var timeInSparseEdmondsMaximumCardinalityMatching = mutableListOf(0L)
@@ -102,22 +106,43 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
       realValueInstanceCount.add(calculateRealValue())
 
       // Update minUnCover
-      minUncoverCount.add(calculateMinUnCover(powerLists))
+      println("Calculating MinUnCover for ${powerLists.size} observed instances...")
+      if (minUncoverCount.lastOrNull() == maxSize) {
+        minUncoverCount.add(maxSize)
+        timeInMinSAT.add(0L)
+      } else {
+        minUncoverCount.add(calculateMinUnCoverUsingZ3(powerLists))
+      }
 
       // Update maxUnCover
-      val max1 = calculateMaxUnCoverUsingSparseEdmonds(powerLists)
-      val max2 = calculateMaxUnCoverUsingHopcroftKarp(powerLists)
-      check(max1 == max2) {
-        "MaxUnCover using SparseEdmonds and Hopcroft-Karp should return the same result, but got $max1 and $max2"
+      println("Calculating MaxUnCover for ${powerLists.size} observed instances...")
+      if (maxUncoverCount.lastOrNull() == maxSize) {
+        maxUncoverCount.add(maxSize)
+        timeInSparseEdmondsMaximumCardinalityMatching.add(0L)
+        timeInHopcroftKarpMaximumCardinalityBipartiteMatching.add(0L)
+        //        timeInMaxSAT.add(0L)
+      } else {
+        val max1 = calculateMaxUnCoverUsingSparseEdmonds(powerLists)
+        val max2 = calculateMaxUnCoverUsingHopcroftKarp(powerLists)
+        //        val max3 = calculateMaxUnCoverUsingZ3(powerLists)
+        check(max1 == max2) {
+          "MaxUnCover using SparseEdmonds and Hopcroft-Karp should return the same result, but got $max1 and $max2"
+        }
+        //        check(max1 == max3) {
+        //          "MaxUnCover using Graph algorithm and SAT solver should return the same result,
+        // but got $max1 and $max3"
+        //        }
+        maxUncoverCount.add(max1)
       }
-      maxUncoverCount.add(max1)
 
+      // Log current status
       val t = (System.currentTimeMillis() - t0) / 1000.0
+      val tMinSat = timeInMinSAT.sum() / 1000.0
       val tMaxSat = timeInMaxSAT.sum() / 1000.0
       val tSparse = timeInSparseEdmondsMaximumCardinalityMatching.sum() / 1000.0
       val tHopcroft = timeInHopcroftKarpMaximumCardinalityBipartiteMatching.sum() / 1000.0
-      print(
-          "\rTick: $evaluatedInstances " +
+      println(
+          "Tick: $evaluatedInstances " +
               "| UB: ${possibleInstanceCount.last()} " +
               "| MaxUC: ${maxUncoverCount.last()} " +
               "| Real: ${realValueInstanceCount.last()} " +
@@ -125,9 +150,9 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
               "| LB: ${certainInstanceCount.last()} " +
               "| Max: $maxSize " +
               "  ||   Gap: ${String.format("%.2f", gap)} % " +
-              "  ||   Time: ${String.format("%.2f", t)} s" +
-              "| MaxSat: $tMaxSat s (${String.format("%.2f", tMaxSat * 100 / t)} %) " +
-              "| Time in MaxCardinality (Sparse / Hopcroft-Karp): $tSparse s (${String.format("%.2f", tSparse * 100 / t)} %) / $tHopcroft s (${String.format("%.2f", tHopcroft * 100 / t)} %)")
+              "  ||   Time: ${String.format("%.2f", t)} s   " +
+              "| Time in MinUnCover (SAT): $tMinSat s (${String.format("%.2f", tMinSat * 100 / t)} %) " +
+              "| Time in MaxUnCover (Sparse / Hopcroft-Karp / SAT): $tSparse s (${String.format("%.2f", tSparse * 100 / t)} %) / $tHopcroft s (${String.format("%.2f", tHopcroft * 100 / t)} %) / $tMaxSat s (${String.format("%.2f", tMaxSat * 100 / t)} %)")
     }
   }
 
@@ -147,8 +172,8 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
   private fun calculateRealValue(): Int =
       observedInstances.map { it.map { t -> t.realValue } }.toSet().size
 
-  /** Calculates MinUnCover for the observed instances. */
-  private fun calculateMinUnCover(powerLists: List<Pair<Bitmask, List<Bitmask>>>): Int {
+  /** Calculates MinUnCover for the observed instances using MaxSAT solver. */
+  private fun calculateMinUnCoverUsingZ3(powerLists: List<Pair<Bitmask, List<Bitmask>>>): Int {
     val t0 = System.currentTimeMillis()
 
     // Initialize Z3 context and optimization solver
@@ -181,6 +206,57 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
     return when (opt.Check()) {
       // Return the count of variables that are true in the model
       Status.SATISFIABLE -> variables.values.count { opt.model.eval(it, true).isTrue }
+      Status.UNSATISFIABLE -> (-2).also { System.err.println("MaxSat returned UNSATISFIABLE!") }
+      Status.UNKNOWN -> (-1).also { System.err.println("MaxSat returned UNKNOWN!") }
+    }.also {
+      ctx.close()
+      timeInMinSAT += (System.currentTimeMillis() - t0)
+    }
+  }
+
+  /** Calculates MinUnCover for the observed instances using MaxSAT solver. */
+  private fun calculateMaxUnCoverUsingZ3(powerLists: List<Pair<Bitmask, List<Bitmask>>>): Int {
+    val t0 = System.currentTimeMillis()
+
+    // Initialize Z3 context and optimization solver
+    val ctx = Context(mapOf("model" to "true"))
+    val opt = ctx.mkOptimize()
+
+    // List of all edges (options) in the bipartite graph
+    val edges = mutableListOf<BoolExpr>()
+
+    // Iterate observed instances
+    var i = 1
+    for (instance in powerLists) {
+      // Blow up the instance to all possible options by replacing unknowns with both options
+      val powerList = instance.second
+
+      // Create a variable (an edge) for each option
+      val options = mutableListOf<BoolExpr>()
+      for (option in powerList) {
+        options.add(ctx.mkBoolConst("${option}_${i++}"))
+      }
+
+      // Add mutual exclusion constraints to ensure only one option (edge) can be true
+      for (i in options.indices) {
+        for (j in i + 1 until options.size) {
+          opt.Add(ctx.mkOr(ctx.mkNot(options[i]), ctx.mkNot(options[j])))
+        }
+      }
+
+      // Add all options (edges) to the list of edges
+      edges.addAll(options)
+    }
+
+    // Add soft constraints for maximization
+    for (edge in edges) {
+      opt.AssertSoft(edge, 1, "")
+    }
+
+    // Solve the optimization problem
+    return when (opt.Check()) {
+      // Return the count of edges that are true in the model
+      Status.SATISFIABLE -> edges.count { opt.model.eval(it, true).isTrue }
       Status.UNSATISFIABLE -> (-2).also { System.err.println("MaxSat returned UNSATISFIABLE!") }
       Status.UNKNOWN -> (-1).also { System.err.println("MaxSat returned UNKNOWN!") }
     }.also {
@@ -331,8 +407,8 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
 
     val values: Map<String, Pair<List<Int>, List<Long>>> =
         mapOf(
-            // "Upper Bound" to ,
-            "MaxSat using Z3" to Pair(xValues, timeInMaxSAT),
+            "MinUnCover using Z3" to Pair(xValues, timeInMinSAT),
+            //            "MaxUnCover using Z3" to Pair(xValues, timeInMaxSAT),
             "Maximum Cardinality Matching using Sparse Edmonds" to
                 Pair(xValues, timeInSparseEdmondsMaximumCardinalityMatching),
             "Maximum Cardinality Matching using Hopcroft-Karp" to
