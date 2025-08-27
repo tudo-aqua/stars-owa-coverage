@@ -33,7 +33,7 @@ dependencies {
   implementation(group = "tools.aqua", name = "z3-turnkey", version = "4.13.0.1")
   implementation(group = "org.jgrapht", name = "jgrapht-core", version = "1.5.2")
   implementation(
-      group = "org.jetbrains.lets-plot", name = "lets-plot-kotlin-jvm", version = "4.9.3")
+      group = "org.jetbrains.lets-plot", name = "lets-plot-kotlin-jvm", version = "4.10.0")
 }
 
 spotless {
