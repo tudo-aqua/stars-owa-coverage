@@ -27,8 +27,6 @@ import tools.aqua.stars.owa.coverage.dataclasses.NoEntity
 import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 import tools.aqua.stars.owa.coverage.dataclasses.Valuation
 
-typealias Bitmask = List<Valuation>
-
 /** @param sampleSize Number of segments to evaluate before updating the metric. */
 @Suppress("DuplicatedCode")
 class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
