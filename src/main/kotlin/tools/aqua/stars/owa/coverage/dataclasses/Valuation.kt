@@ -34,8 +34,8 @@ data class Valuation(
   override fun toString(): String =
       when {
         isUnknown -> "?"
-        isTrue -> "\u22A4"
-        isFalse -> "\u22A5"
+        isTrue -> "T"
+        isFalse -> "F"
         else -> error("Illegal")
       }
 
