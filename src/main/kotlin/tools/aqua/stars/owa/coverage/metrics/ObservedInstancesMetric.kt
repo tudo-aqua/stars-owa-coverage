@@ -94,7 +94,7 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
         maxUncoverCount.add(maxSize)
         MaxUnCoverGraphBased.totalTimeInSparseEdmonds.add(0L)
         MaxUnCoverGraphBased.totalTimeInHopcroftKarp.add(0L)
-        //        timeInMaxSAT.add(0L)
+        MaxUnCoverZ3.totalTime.add(0L)
       } else {
         val max1 = MaxUnCoverGraphBased.calculateSparseEdmonds(powerLists)
         val max2 = MaxUnCoverGraphBased.calculateHopcroftKarp(powerLists)
@@ -102,10 +102,9 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
         check(max1 == max2) {
           "MaxUnCover using SparseEdmonds and Hopcroft-Karp should return the same result, but got $max1 and $max2"
         }
-        //        check(max1 == max3) {
-        //          "MaxUnCover using Graph algorithm and SAT solver should return the same result,
-        // but got $max1 and $max3"
-        //        }
+        check(max1 == max3) {
+          "MaxUnCover using Graph algorithm and SAT solver should return the same result but got $max1 and $max3"
+        }
         maxUncoverCount.add(max1)
       }
 
@@ -125,8 +124,8 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
               "| Max: $maxSize " +
               "  ||   Gap: ${String.format("%.2f", gap)} % " +
               "  ||   Time: ${String.format("%.2f", t)} s   " +
-              "| Time in MinUnCover (SAT): $tMinSat s (${String.format("%.2f", tMinSat * 100 / t)} %) " +
-              "| Time in MaxUnCover (Sparse / Hopcroft-Karp / SAT): $tSparse s (${String.format("%.2f", tSparse * 100 / t)} %) / $tHopcroft s (${String.format("%.2f", tHopcroft * 100 / t)} %) / $tMaxSat s (${String.format("%.2f", tMaxSat * 100 / t)} %)")
+              "| Time in MinUnCover (SAT): ${String.format("%.2f", tMinSat)} s (${String.format("%.2f", tMinSat * 100 / t)} %) " +
+              "| Time in MaxUnCover (Sparse / Hopcroft-Karp / SAT): ${String.format("%.2f", tSparse)} s (${String.format("%.2f", tSparse * 100 / t)} %) / ${String.format("%.2f", tHopcroft)} s (${String.format("%.2f", tHopcroft * 100 / t)} %) / ${String.format("%.2f", tMaxSat)} s (${String.format("%.2f", tMaxSat * 100 / t)} %)")
     }
   }
 

@@ -53,21 +53,21 @@ object MaxUnCoverGraphBased {
     val graph: Graph<String, DefaultEdge> = SimpleGraph(DefaultEdge::class.java)
 
     // Add vertices for the observed instances
-    val partition1 = powerLists.map { "o${it.first}" }.toSet()
+    val partition1 = powerLists.map{ it.first }.mapIndexed { index, instance -> "o_${index}_${instance}" }.toSet()
     partition1.forEach { graph.addVertex(it) }
 
     // Add vertices for the possible instances
-    val partition2 = powerLists.map { it.second }.flatten().map { it.toString() }.toSet()
+    val partition2 = powerLists.flatMap { instance -> instance.second.map { "$it" } }.toSet()
     partition2.forEach { graph.addVertex(it) }
 
     // Add edges between observed and possible instances
-    for (instance in powerLists) {
+    powerLists.forEachIndexed { index, instance ->
       val original = instance.first
       val powerlist = instance.second
 
       // Add edges from the observed instance containing unknowns to the possible instances
       for (possibleInstance in powerlist) {
-        graph.addEdge("o$original", "$possibleInstance")
+        graph.addEdge("o_${index}_${original}", "$possibleInstance")
       }
     }
 

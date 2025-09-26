@@ -16,41 +16,59 @@ object MaxUnCoverZ3 {
     val ctx = Context(mapOf("model" to "true"))
     val opt = ctx.mkOptimize()
 
-    // List of all edges (options) in the bipartite graph
-    val edges = mutableListOf<BoolExpr>()
+    // Create two maps of the nodes (left and right side of the bipartite graph) to their edges (options)
+    // Left side: observed instances -> edges to their options
+    val observedScenariosMap = mutableMapOf<Bitmask, MutableList<BoolExpr>>()
+    // Right side: edges from different observed instances to the same option
+    val optionsMap = mutableMapOf<Bitmask, MutableList<BoolExpr>>()
 
     // Iterate observed instances
-    var i = 1
-    for (instance in powerLists) {
+    powerLists.forEachIndexed { index, instance ->
       // Blow up the instance to all possible options by replacing unknowns with both options
       val powerList = instance.second
 
       // Create a variable (an edge) for each option
-      val options = mutableListOf<BoolExpr>()
       for (option in powerList) {
-        options.add(ctx.mkBoolConst("${option}_${i++}"))
-      }
+        // Create boolean variable for the edge
+        val expr = ctx.mkBoolConst("${index}_${option}")
 
-      // Add mutual exclusion constraints to ensure only one option (edge) can be true
+        // Map the observed instance to its possible vales (left side)
+        observedScenariosMap.getOrPut(instance.first) { mutableListOf() }.add(expr)
+
+        // Add the "edge" to the possibly already existing option (right side)
+        optionsMap.getOrPut(option) { mutableListOf() }.add(expr)
+      }
+    }
+
+    // Add mutual exclusion constraints to ensure only one option (edge) can be true for each seen instance (left side)
+    for (options in observedScenariosMap.values) {
       for (i in options.indices) {
         for (j in i + 1 until options.size) {
           opt.Add(ctx.mkOr(ctx.mkNot(options[i]), ctx.mkNot(options[j])))
         }
       }
+    }
 
-      // Add all options (edges) to the list of edges
-      edges.addAll(options)
+    // Add mutual exclusion constraints to ensure only one option (edge) can be true for each possible instance (right side)
+    for (options in optionsMap.values) {
+      for (i in options.indices) {
+        for (j in i + 1 until options.size) {
+          opt.Add(ctx.mkOr(ctx.mkNot(options[i]), ctx.mkNot(options[j])))
+        }
+      }
     }
 
     // Add soft constraints for maximization
-    for (edge in edges) {
-      opt.AssertSoft(edge, 1, "")
+    for (options in observedScenariosMap.values) {
+      for (edge in options) {
+        opt.AssertSoft(edge, 1, "")
+      }
     }
 
     // Solve the optimization problem
     return when (opt.Check()) {
       // Return the count of edges that are true in the model
-      Status.SATISFIABLE -> edges.count { opt.model.eval(it, true).isTrue }
+      Status.SATISFIABLE -> optionsMap.map { t -> t.value.count { opt.model.eval(it, true).isTrue } }.sum()
       Status.UNSATISFIABLE -> (-2).also { System.err.println("MaxSat returned UNSATISFIABLE!") }
       Status.UNKNOWN -> (-1).also { System.err.println("MaxSat returned UNKNOWN!") }
     }.also {
