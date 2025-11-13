@@ -16,5 +16,3 @@
  */
 
 rootProject.name = "stars-owa-coverage"
-
-includeBuild("../stars")

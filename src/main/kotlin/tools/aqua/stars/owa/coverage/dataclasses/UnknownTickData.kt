@@ -23,7 +23,7 @@ import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
 
 class UnknownTickData(currentTick: TickDataUnitSeconds, val unknownData: List<Valuation>) :
     TickDataType<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds>(
-        currentTick) {
+        currentTickUnit = currentTick, identifier = currentTick.tickSeconds.toString()) {
 
   override val ego: NoEntity
     get() = throw UnsupportedOperationException("UnknownTickData does not have an ego entity")

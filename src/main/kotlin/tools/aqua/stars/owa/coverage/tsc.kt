@@ -34,7 +34,7 @@ fun tsc(size: Int): TSC<NoEntity, UnknownTickData, TickDataUnitSeconds, TickData
               TSCEdge(
                   condition = { td -> td.unknownData[it].condition },
                   inverseCondition = { td -> td.unknownData[it].inverseCondition },
-                  destination = TSCLeafNode("Leaf $it", emptyMap(), emptyMap()) {}))
+                  destination = TSCLeafNode("Leaf $it", emptyMap())))
         }
       }
     }

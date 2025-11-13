@@ -17,10 +17,10 @@
 
 package tools.aqua.stars.owa.coverage.metrics
 
-import tools.aqua.stars.core.metric.metrics.providers.Plottable
-import tools.aqua.stars.core.metric.metrics.providers.TickMetricProvider
-import tools.aqua.stars.core.metric.utils.getPlot
-import tools.aqua.stars.core.metric.utils.plotDataAsLineChart
+import tools.aqua.stars.core.metrics.providers.Plottable
+import tools.aqua.stars.core.metrics.providers.TickMetricProvider
+import tools.aqua.stars.core.utils.getPlot
+import tools.aqua.stars.core.utils.plotDataAsLineChart
 import tools.aqua.stars.data.av.dataclasses.TickDataDifferenceSeconds
 import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
 import tools.aqua.stars.owa.coverage.dataclasses.NoEntity
