@@ -1,5 +1,73 @@
 package tools.aqua.stars.owa.coverage
 
+import tools.aqua.stars.importer.carla.CarlaSimulationRunsWrapper
+import tools.aqua.stars.importer.carla.loadTicks
+import java.io.File
+import java.nio.file.Path
+import java.util.zip.ZipFile
+import kotlin.io.path.name
+import kotlin.sequences.forEach
+
 fun runSimulationExperiment() {
   println("Running simulation experiment")
+
+  val ticks = loadTicks(simulationRunsWrappers = getSimulationRuns(), useEveryVehicleAsEgo = true)
+
+  println("Loaded ${ticks.count()} simulation runs")
+}
+
+
+private fun getSimulationRuns(): List<CarlaSimulationRunsWrapper> =
+  File("data").let { file ->
+    file
+      .walk()
+      .filter { it.isDirectory && it != file }
+      .toList()
+      .mapNotNull { mapFolder ->
+        var staticFile: Path? = null
+        val dynamicFiles = mutableListOf<Path>()
+        mapFolder.walk().forEach { mapFile ->
+          if (mapFile.nameWithoutExtension.contains("static_data")) {
+            staticFile = mapFile.toPath()
+          }
+          if (mapFile.nameWithoutExtension.contains("dynamic_data")) {
+            dynamicFiles.add(mapFile.toPath())
+          }
+        }
+
+        if (staticFile == null || dynamicFiles.isEmpty()) {
+          return@mapNotNull null
+        }
+
+        dynamicFiles.sortBy {
+          "_seed([0-9]{1,4})".toRegex().find(it.fileName.name)?.groups?.get(1)?.value?.toInt()
+            ?: 0
+        }
+        println(staticFile)
+        return@mapNotNull CarlaSimulationRunsWrapper(staticFile, dynamicFiles)
+      }
+  }
+
+/**
+ * Extract a zip file into any directory.
+ *
+ * @param zipFile src zip file
+ * @param outputDir directory to extract into. There will be new folder with the zip's name inside
+ *   [outputDir] directory.
+ * @return the extracted directory i.e.
+ */
+private fun extractZipFile(zipFile: File, outputDir: File): File? {
+  ZipFile(zipFile).use { zip ->
+    zip.entries().asSequence().forEach { entry ->
+      zip.getInputStream(entry).use { input ->
+        if (entry.isDirectory) File(outputDir, entry.name).also { it.mkdirs() }
+        else
+          File(outputDir, entry.name)
+            .also { it.parentFile.mkdirs() }
+            .outputStream()
+            .use { output -> input.copyTo(output) }
+      }
+    }
+  }
+  return outputDir
 }
