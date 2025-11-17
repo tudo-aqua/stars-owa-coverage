@@ -7,7 +7,7 @@ import tools.aqua.stars.core.hooks.PreTickEvaluationHook
 import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
 import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 import tools.aqua.stars.owa.coverage.dataclasses.Valuation
-import tools.aqua.stars.owa.coverage.metrics.ObservedInstancesMetric
+import tools.aqua.stars.owa.coverage.metrics.ObservedInstancesMetricOnKnownData
 import kotlin.math.pow
 import kotlin.random.Random
 
@@ -31,9 +31,9 @@ fun runRandomExperiment(args: Array<String>) {
 
   val maxSize = (2.0).pow(unknownProbabilities.size.toDouble()).toInt()
 
-  val tsc = tsc(size = unknownProbabilities.size)
+  val tsc = randomTSC(size = unknownProbabilities.size)
   val ticks = generateTicks(probabilities = unknownProbabilities, maxTicks = maxTicks, seed = seed)
-  val metric = ObservedInstancesMetric(sampleSize = sampleSize, maxSize = maxSize)
+  val metric = ObservedInstancesMetricOnKnownData(sampleSize = sampleSize, maxSize = maxSize)
 
   TSCEvaluation(tscList = listOf(tsc))
     .apply {

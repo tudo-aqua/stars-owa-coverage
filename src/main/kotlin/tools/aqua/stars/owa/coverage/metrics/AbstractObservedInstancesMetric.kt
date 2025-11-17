@@ -18,7 +18,8 @@
 package tools.aqua.stars.owa.coverage.metrics
 
 import tools.aqua.stars.core.metrics.providers.Plottable
-import tools.aqua.stars.core.metrics.providers.TickMetricProvider
+import tools.aqua.stars.core.types.EntityType
+import tools.aqua.stars.core.types.TickDataType
 import tools.aqua.stars.core.utils.getPlot
 import tools.aqua.stars.core.utils.plotDataAsLineChart
 import tools.aqua.stars.data.av.dataclasses.TickDataDifferenceSeconds
@@ -29,11 +30,13 @@ import tools.aqua.stars.owa.coverage.dataclasses.Valuation
 
 /** @param sampleSize Number of segments to evaluate before updating the metric. */
 @Suppress("DuplicatedCode")
-class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
-    TickMetricProvider<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds>,
+abstract class AbstractObservedInstancesMetric<
+    E: EntityType<E, T, TickDataUnitSeconds, TickDataDifferenceSeconds>,
+    T: TickDataType<E, T, TickDataUnitSeconds, TickDataDifferenceSeconds>,
+    >(val sampleSize: Int = 1, val maxSize: Int) :
     Plottable {
-  private var evaluatedInstances: Int = 0
-  private val t0 = System.currentTimeMillis()
+  protected var evaluatedInstances: Int = 0
+  protected val t0 = System.currentTimeMillis()
 
   /** List of all observed instances including those containing unknowns */
   val observedInstances = mutableSetOf<Bitmask>()
@@ -61,8 +64,8 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int) :
         (possibleInstanceCount.last() - certainInstanceCount.last()) /
             possibleInstanceCount.last().toDouble() * 100
 
-  override fun evaluate(tick: UnknownTickData) {
-    observedInstances.add(tick.unknownData) // Note: This is a set, so duplicates are ignored
+  fun evaluate(valuations: List<Valuation>) {
+    observedInstances.add(valuations) // Note: This is a set, so duplicates are ignored
     evaluatedInstances++
 
     // Update "raw" observedInstanceCount

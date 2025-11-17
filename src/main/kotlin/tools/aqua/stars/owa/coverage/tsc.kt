@@ -21,12 +21,14 @@ import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.builder.tsc
 import tools.aqua.stars.core.tsc.edge.TSCEdge
 import tools.aqua.stars.core.tsc.node.TSCLeafNode
+import tools.aqua.stars.data.av.dataclasses.Actor
+import tools.aqua.stars.data.av.dataclasses.TickData
 import tools.aqua.stars.data.av.dataclasses.TickDataDifferenceSeconds
 import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
 import tools.aqua.stars.owa.coverage.dataclasses.NoEntity
 import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 
-fun tsc(size: Int): TSC<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds> =
+fun randomTSC(size: Int): TSC<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds> =
     tsc {
       all("TSCRoot") {
         repeat(size) {
@@ -38,3 +40,21 @@ fun tsc(size: Int): TSC<NoEntity, UnknownTickData, TickDataUnitSeconds, TickData
         }
       }
     }
+
+fun simTSC(): TSC<Actor, TickData, TickDataUnitSeconds, TickDataDifferenceSeconds> =
+  tsc {
+    all("TSCRoot") {
+      leaf("true") {
+        condition { it.currentTickUnit.tickSeconds % 3 == 0.0 }
+      }
+
+      leaf("false") {
+        condition { false }
+      }
+
+      leaf("unknown") {
+        condition { false }
+        inverseCondition { it.currentTickUnit.tickSeconds % 2 == 0.0 }
+      }
+    }
+  }

@@ -20,7 +20,7 @@ package tools.aqua.stars.owa.coverage.dataclasses
 data class Valuation(
     val condition: Boolean,
     val inverseCondition: Boolean,
-    val realValue: Boolean
+    val realValue: Boolean?
 ) {
   val isUnknown: Boolean
     get() = !condition && !inverseCondition
@@ -46,4 +46,10 @@ data class Valuation(
               inverseCondition == other.inverseCondition)
 
   override fun hashCode(): Int = 31 * condition.hashCode() + inverseCondition.hashCode()
+
+  companion object {
+    val UNKNOWN = Valuation(condition = false, inverseCondition = false, realValue = null)
+    val TRUE = Valuation(condition = true, inverseCondition = false, realValue = true)
+    val FALSE = Valuation(condition = false, inverseCondition = true, realValue = false)
+  }
 }

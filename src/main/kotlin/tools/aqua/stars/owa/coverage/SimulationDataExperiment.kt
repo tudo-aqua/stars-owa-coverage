@@ -1,7 +1,9 @@
 package tools.aqua.stars.owa.coverage
 
+import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.importer.carla.CarlaSimulationRunsWrapper
 import tools.aqua.stars.importer.carla.loadTicks
+import tools.aqua.stars.owa.coverage.metrics.ObservedInstancesMetricOnTickData
 import java.io.File
 import java.nio.file.Path
 import java.util.zip.ZipFile
@@ -11,14 +13,25 @@ import kotlin.sequences.forEach
 fun runSimulationExperiment() {
   println("Running simulation experiment")
 
-  val ticks = loadTicks(simulationRunsWrappers = getSimulationRuns(), useEveryVehicleAsEgo = true)
+  val ticks = loadTicks(simulationRunsWrappers = getSimulationRuns(), useFirstVehicleAsEgo = true)
+  val tsc = simTSC()
 
-  println("Loaded ${ticks.count()} simulation runs")
+  TSCEvaluation(
+   tsc = simTSC(),
+    writePlots = true,
+    writePlotDataCSV = true,
+    writeSerializedResults = false,
+  ).apply {
+    registerMetricProviders(
+      ObservedInstancesMetricOnTickData(tsc = tsc)
+    )
+    runEvaluation(ticks)
+  }
 }
 
 
 private fun getSimulationRuns(): List<CarlaSimulationRunsWrapper> =
-  File("data").let { file ->
+  File("testData").let { file ->
     file
       .walk()
       .filter { it.isDirectory && it != file }
