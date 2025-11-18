@@ -21,7 +21,6 @@ import tools.aqua.stars.core.metrics.providers.Plottable
 import tools.aqua.stars.core.metrics.providers.TSCInstanceMetricProvider
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.instance.TSCInstance
-import tools.aqua.stars.core.tsc.instance.TSCInstanceNode
 import tools.aqua.stars.data.av.dataclasses.Actor
 import tools.aqua.stars.data.av.dataclasses.TickData
 import tools.aqua.stars.data.av.dataclasses.TickDataDifferenceSeconds
@@ -35,26 +34,34 @@ class ObservedInstancesMetricOnTickData(tsc: TSC<Actor, TickData, TickDataUnitSe
     TSCInstanceMetricProvider<Actor, TickData, TickDataUnitSeconds, TickDataDifferenceSeconds>,
     Plottable {
 
-  val tags: List<String> = tsc.toList().map { it.label }
+  val tags = tsc.toList().map { it.label }
+  var tickCount : Int = 0
+  val unknownOccurrences: MutableMap<String, Int> = tags.associateWith { 0 }.toMutableMap()
 
   override fun evaluate(tscInstance: TSCInstance<Actor, TickData, TickDataUnitSeconds, TickDataDifferenceSeconds>) {
-    super.evaluate(tscInstance.toList().toBitmask())
-  }
+    val bitmask = MutableList(tags.size) { Valuation.FALSE }
 
-  private fun List<TSCInstanceNode<*,*,*,*>>.toBitmask(): Bitmask =
-    List(tags.size) { i ->
-      val node = this.firstOrNull { it.label == tags[i] }
+    tscInstance.forEach {
+      val index = tags.indexOf(it.label)
 
-      when {
-        // Node not in instance -> known false
-        node == null -> Valuation.FALSE
-
-        // Node is unknown
-        node.isUnknown -> Valuation.UNKNOWN
-
-        // Node is known true
-        else -> Valuation.TRUE
+      if (it.isUnknown) {
+        unknownOccurrences[it.label] = unknownOccurrences.getValue(it.label)
+        bitmask[index] = Valuation.UNKNOWN
+      } else {
+        bitmask[index] = Valuation.TRUE
       }
     }
 
+    tickCount++
+
+    super.evaluate(bitmask)
+  }
+
+  fun printSummary() {
+    println("Tick count: $tickCount")
+    println("Unknown occurrences:")
+    unknownOccurrences.forEach { (tag, count) ->
+      println("  $tag: $count (${count.toDouble() / tickCount * 100}%)")
+    }
+  }
 }

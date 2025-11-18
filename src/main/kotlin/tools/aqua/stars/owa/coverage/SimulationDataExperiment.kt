@@ -10,11 +10,19 @@ import java.util.zip.ZipFile
 import kotlin.io.path.name
 import kotlin.sequences.forEach
 
+const val ALL_EGO = true
+
 fun runSimulationExperiment() {
   println("Running simulation experiment")
 
-  val ticks = loadTicks(simulationRunsWrappers = getSimulationRuns(), useFirstVehicleAsEgo = true)
+  val ticks = loadTicks(
+    simulationRunsWrappers = getSimulationRuns(),
+    useFirstVehicleAsEgo = !ALL_EGO,
+    useEveryVehicleAsEgo = ALL_EGO
+  )
   val tsc = simTSC()
+
+  val metric = ObservedInstancesMetricOnTickData(tsc = tsc)
 
   TSCEvaluation(
    tsc = simTSC(),
@@ -23,10 +31,12 @@ fun runSimulationExperiment() {
     writeSerializedResults = false,
   ).apply {
     registerMetricProviders(
-      ObservedInstancesMetricOnTickData(tsc = tsc)
+      metric
     )
     runEvaluation(ticks)
   }
+
+  metric.printSummary()
 }
 
 
@@ -69,7 +79,7 @@ private fun getSimulationRuns(): List<CarlaSimulationRunsWrapper> =
  *   [outputDir] directory.
  * @return the extracted directory i.e.
  */
-private fun extractZipFile(zipFile: File, outputDir: File): File? {
+private fun extractZipFile(zipFile: File, outputDir: File): File {
   ZipFile(zipFile).use { zip ->
     zip.entries().asSequence().forEach { entry ->
       zip.getInputStream(entry).use { input ->
