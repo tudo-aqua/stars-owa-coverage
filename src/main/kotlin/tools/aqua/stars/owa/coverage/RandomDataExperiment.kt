@@ -17,7 +17,6 @@
 
 package tools.aqua.stars.owa.coverage
 
-import org.jetbrains.letsPlot.commons.intern.math.ipow
 import kotlin.random.Random
 import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.evaluation.TickSequence
@@ -113,7 +112,7 @@ private fun generateTicks(
       UnknownTickData(
               currentTick = TickDataUnitSeconds(index.toDouble()),
               unknownData =
-                (0..numTags).map {
+                (0 until numTags).map {
                     val valuation: Boolean
                     val inverse: Boolean
                     val realValue: Boolean
