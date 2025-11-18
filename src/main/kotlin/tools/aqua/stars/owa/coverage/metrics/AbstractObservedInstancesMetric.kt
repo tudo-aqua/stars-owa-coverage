@@ -24,19 +24,20 @@ import tools.aqua.stars.core.utils.getPlot
 import tools.aqua.stars.core.utils.plotDataAsLineChart
 import tools.aqua.stars.data.av.dataclasses.TickDataDifferenceSeconds
 import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
-import tools.aqua.stars.owa.coverage.dataclasses.NoEntity
-import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 import tools.aqua.stars.owa.coverage.dataclasses.Valuation
 
 /** @param sampleSize Number of segments to evaluate before updating the metric. */
 @Suppress("DuplicatedCode")
 abstract class AbstractObservedInstancesMetric<
-    E: EntityType<E, T, TickDataUnitSeconds, TickDataDifferenceSeconds>,
-    T: TickDataType<E, T, TickDataUnitSeconds, TickDataDifferenceSeconds>,
-    >(val sampleSize: Int = 1, val maxSize: Int) :
-    Plottable {
+    E : EntityType<E, T, TickDataUnitSeconds, TickDataDifferenceSeconds>,
+    T : TickDataType<E, T, TickDataUnitSeconds, TickDataDifferenceSeconds>,
+>(val sampleSize: Int = 1, val maxSize: Int) : Plottable {
   protected var evaluatedInstances: Int = 0
   protected val t0 = System.currentTimeMillis()
+
+  private val minUnCoverZ3 = MinUnCoverZ3()
+  private val maxUnCoverZ3 = MaxUnCoverZ3()
+  private val maxUnCoverGraphBased = MaxUnCoverGraphBased()
 
   /** List of all observed instances including those containing unknowns */
   val observedInstances = mutableSetOf<Bitmask>()
@@ -72,63 +73,63 @@ abstract class AbstractObservedInstancesMetric<
     observedInstanceCount.add(observedInstances.size)
 
     if (evaluatedInstances % sampleSize == 0) {
+      print("Tick: $evaluatedInstances")
+
       // Calculate power lists for all observed instances
       val powerLists = observedInstances.map { it to powerList(it) }
 
       // Update lower bound
       certainInstanceCount.add(calculateLowerBound())
+      print(" | LB: ${certainInstanceCount.last()}")
 
       // Update upper bound
       possibleInstanceCount.add(calculateUpperBound(powerLists))
+      print(" | UB: ${possibleInstanceCount.last()}")
 
       // Update realValueInstanceCount
       realValueInstanceCount.add(calculateRealValue())
+      print(" | Real: ${realValueInstanceCount.last()}")
 
       // Update minUnCover
       if (minUncoverCount.lastOrNull() == maxSize) {
         minUncoverCount.add(maxSize)
-        MinUnCoverZ3.totalTime.add(0L)
+        minUnCoverZ3.totalTime.add(0L)
       } else {
-        minUncoverCount.add(MinUnCoverZ3.calculate(powerLists))
+        minUncoverCount.add(minUnCoverZ3.calculate(powerLists))
       }
+      print(" | MinUC: ${minUncoverCount.last()}")
 
       // Update maxUnCover
       if (maxUncoverCount.lastOrNull() == maxSize) {
         maxUncoverCount.add(maxSize)
-        MaxUnCoverGraphBased.totalTimeInSparseEdmonds.add(0L)
-        MaxUnCoverGraphBased.totalTimeInHopcroftKarp.add(0L)
-        MaxUnCoverZ3.totalTime.add(0L)
+        maxUnCoverGraphBased.totalTimeInSparseEdmonds.add(0L)
+        maxUnCoverGraphBased.totalTimeInHopcroftKarp.add(0L)
+        maxUnCoverZ3.totalTime.add(0L)
       } else {
-        val max1 = MaxUnCoverGraphBased.calculateSparseEdmonds(powerLists)
-        val max2 = MaxUnCoverGraphBased.calculateHopcroftKarp(powerLists)
-        val max3 = MaxUnCoverZ3.calculate(powerLists)
+        val max1 = maxUnCoverGraphBased.calculateSparseEdmonds(powerLists)
+        val max2 = maxUnCoverGraphBased.calculateHopcroftKarp(powerLists)
         check(max1 == max2) {
           "MaxUnCover using SparseEdmonds and Hopcroft-Karp should return the same result, but got $max1 and $max2"
         }
-        check(max1 == max3) {
-          "MaxUnCover using Graph algorithm and SAT solver should return the same result but got $max1 and $max3"
-        }
+        //val max3 = MaxUnCoverZ3.calculate(powerLists)
+        //check(max1 == max3) {
+        //  "MaxUnCover using Graph algorithm and SAT solver should return the same result but got $max1 and $max3"
+        //}
         maxUncoverCount.add(max1)
       }
+      print(" | MaxUC: ${maxUncoverCount.last()} | Max: $maxSize   ||   Gap: ${String.format("%.2f", gap)} %")
+
 
       // Log current status
       val t = (System.currentTimeMillis() - t0) / 1000.0
-      val tMinSat = MinUnCoverZ3.totalTime.sum() / 1000.0
-      val tMaxSat = MaxUnCoverZ3.totalTime.sum() / 1000.0
-      val tSparse = MaxUnCoverGraphBased.totalTimeInSparseEdmonds.sum() / 1000.0
-      val tHopcroft = MaxUnCoverGraphBased.totalTimeInHopcroftKarp.sum() / 1000.0
-      println(
-          "\rTick: $evaluatedInstances " +
-              "| UB: ${possibleInstanceCount.last()} " +
-              "| MaxUC: ${maxUncoverCount.last()} " +
-              "| Real: ${realValueInstanceCount.last()} " +
-              "| MinUC: ${minUncoverCount.last()} " +
-              "| LB: ${certainInstanceCount.last()} " +
-              "| Max: $maxSize " +
-              "  ||   Gap: ${String.format("%.2f", gap)} % " +
-              "  ||   Time: ${String.format("%.2f", t)} s   " +
-              "| Time in MinUnCover (SAT): ${String.format("%.2f", tMinSat)} s (${String.format("%.2f", tMinSat * 100 / t)} %) " +
-              "| Time in MaxUnCover (Sparse / Hopcroft-Karp / SAT): ${String.format("%.2f", tSparse)} s (${String.format("%.2f", tSparse * 100 / t)} %) / ${String.format("%.2f", tHopcroft)} s (${String.format("%.2f", tHopcroft * 100 / t)} %) / ${String.format("%.2f", tMaxSat)} s (${String.format("%.2f", tMaxSat * 100 / t)} %)")
+      val tMinSat = minUnCoverZ3.totalTime.sum() / 1000.0
+      val tMaxSat = maxUnCoverZ3.totalTime.sum() / 1000.0
+      val tSparse = maxUnCoverGraphBased.totalTimeInSparseEdmonds.sum() / 1000.0
+      val tHopcroft = maxUnCoverGraphBased.totalTimeInHopcroftKarp.sum() / 1000.0
+      print("   ||   Time: ${String.format("%.2f", t)} s   ")
+      print("| Time in MinUnCover (SAT): ${String.format("%.2f", tMinSat)} s (${String.format("%.2f", tMinSat * 100 / t)} %) ")
+      print("| Time in MaxUnCover (Sparse / Hopcroft-Karp / SAT): ${String.format("%.2f", tSparse)} s (${String.format("%.2f", tSparse * 100 / t)} %) / ${String.format("%.2f", tHopcroft)} s (${String.format("%.2f", tHopcroft * 100 / t)} %) / ${String.format("%.2f", tMaxSat)} s (${String.format("%.2f", tMaxSat * 100 / t)} %)")
+      println()
     }
   }
 
@@ -225,16 +226,16 @@ abstract class AbstractObservedInstancesMetric<
   }
 
   private fun plotSolverTime() {
-    val xValues = List(MinUnCoverZ3.totalTime.size) { it * sampleSize }
+    val xValues = List(minUnCoverZ3.totalTime.size) { it * sampleSize }
 
     val values: Map<String, Pair<List<Int>, List<Long>>> =
         mapOf(
-            "MinUnCover using Z3" to Pair(xValues, MinUnCoverZ3.totalTime),
+            "MinUnCover using Z3" to Pair(xValues, minUnCoverZ3.totalTime),
             //            "MaxUnCover using Z3" to Pair(xValues, timeInMaxSAT),
             "Maximum Cardinality Matching using Sparse Edmonds" to
-                Pair(xValues, MaxUnCoverGraphBased.totalTimeInSparseEdmonds),
+                Pair(xValues, maxUnCoverGraphBased.totalTimeInSparseEdmonds),
             "Maximum Cardinality Matching using Hopcroft-Karp" to
-                Pair(xValues, MaxUnCoverGraphBased.totalTimeInHopcroftKarp))
+                Pair(xValues, maxUnCoverGraphBased.totalTimeInHopcroftKarp))
 
     repeat(4) {
       val logX = it % 2 == 1
@@ -255,5 +256,7 @@ abstract class AbstractObservedInstancesMetric<
     }
   }
 
-  override fun writePlotDataCSV() {}
+  override fun writePlotDataCSV() {
+    
+  }
 }

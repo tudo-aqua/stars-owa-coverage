@@ -29,16 +29,22 @@ import tools.aqua.stars.owa.coverage.dataclasses.Valuation
 
 /** @param sampleSize Number of segments to evaluate before updating the metric. */
 @Suppress("DuplicatedCode")
-class ObservedInstancesMetricOnTickData(tsc: TSC<Actor, TickData, TickDataUnitSeconds, TickDataDifferenceSeconds>, sampleSize: Int = 1, maxSize: Int = tsc.instanceCount.toInt()) :
+class ObservedInstancesMetricOnTickData(
+    tsc: TSC<Actor, TickData, TickDataUnitSeconds, TickDataDifferenceSeconds>,
+    sampleSize: Int = 1,
+    maxSize: Int = tsc.instanceCount.toInt()
+) :
     AbstractObservedInstancesMetric<Actor, TickData>(sampleSize = sampleSize, maxSize = maxSize),
     TSCInstanceMetricProvider<Actor, TickData, TickDataUnitSeconds, TickDataDifferenceSeconds>,
     Plottable {
 
   val tags = tsc.toList().map { it.label }
-  var tickCount : Int = 0
+  var tickCount: Int = 0
   val unknownOccurrences: MutableMap<String, Int> = tags.associateWith { 0 }.toMutableMap()
 
-  override fun evaluate(tscInstance: TSCInstance<Actor, TickData, TickDataUnitSeconds, TickDataDifferenceSeconds>) {
+  override fun evaluate(
+      tscInstance: TSCInstance<Actor, TickData, TickDataUnitSeconds, TickDataDifferenceSeconds>
+  ) {
     val bitmask = MutableList(tags.size) { Valuation.FALSE }
 
     tscInstance.forEach {

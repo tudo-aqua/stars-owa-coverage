@@ -17,11 +17,14 @@
 
 package tools.aqua.stars.owa.coverage
 
-const val ARGS_ERROR = "Expected arguments: \"sim\" OR \"rnd\" [numTags] [maxTicks] (seed)"
+const val ARGS_ERROR =
+    "Expected arguments: \"sim\" OR \"rnd\" [numTags] [maxTicks] [probability] (seed)"
+
 fun main(args: Array<String>) {
   check(args.isNotEmpty()) { ARGS_ERROR }
 
   when (args[0]) {
+    "mtx" -> runMatrixExperiment()
     "rnd" -> runRandomExperiment(args.drop(1).toTypedArray())
     "sim" -> runSimulationExperiment()
     else -> error(ARGS_ERROR)

@@ -17,6 +17,7 @@
 
 package tools.aqua.stars.owa.coverage
 
+import kotlin.math.sign
 import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.builder.tsc
 import tools.aqua.stars.core.tsc.edge.TSCEdge
@@ -31,66 +32,81 @@ import tools.aqua.stars.logic.kcmftbl.past.historically
 import tools.aqua.stars.logic.kcmftbl.past.once
 import tools.aqua.stars.owa.coverage.dataclasses.NoEntity
 import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
-import kotlin.math.sign
 
-fun randomTSC(size: Int): TSC<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds> =
-    tsc {
-      all("TSCRoot") {
-        repeat(size) {
-          addEdge(
-              TSCEdge(
-                  condition = { td -> td.unknownData[it].condition },
-                  inverseCondition = { td -> td.unknownData[it].inverseCondition },
-                  destination = TSCLeafNode("Leaf $it", emptyMap())))
-        }
-      }
-    }
-
-fun simTSC(): TSC<Actor, TickData, TickDataUnitSeconds, TickDataDifferenceSeconds> =
-  tsc {
-    all("TSCRoot") {
-      leaf("t3") {
-        condition {
-          exists(it.vehicles) { v ->
-            it.ego.boundingBox.toBoundingBox2D().extendFront(minDistanceToFront((it.ego.velocity.magnitude()))).collidesWith(v.boundingBox.toBoundingBox2D())
-          }
-        }
-        inverseCondition {
-          !exists(it.vehicles) { v ->
-            it.ego.boundingBox.toBoundingBox2D().extendFront(it.ego.velocity.magnitude() * 3.6 / 2).collidesWith(v.boundingBox.toBoundingBox2D()) // Velocity in km/h divided in half ("half tacho value"))
-          }
-        }
-      }
-
-      leaf("t6") {
-        condition {
-          exists(it.vehicles) { v ->
-            v.lane.road == it.ego.lane.road && v.lane.laneId.sign == it.ego.lane.laneId.sign
-          }
-        }
-      }
-
-      leaf("t7") {
-        condition {
-          // Check that at least 10 seconds have passed
-          once(it, TickDataDifferenceSeconds(10.0) .. TickDataDifferenceSeconds(Double.POSITIVE_INFINITY)) { true } &&
-
-              // Check that there is at least one vehicle in ego lane within 30m in front of ego
-              exists(it.vehicles) { v ->
-                historically(it, TickDataDifferenceSeconds(10.0) .. TickDataDifferenceSeconds(10.0)) { t ->
-                  val v0 = t.vehicles.firstOrNull { v1 -> v1.id == v.id} ?: return@historically false
-
-                  v0.lane == t.ego.lane && v0.boundingBox.toBoundingBox2D().collidesWith(it.ego.boundingBox.toBoundingBox2D().extendFront(30.0))
-                }
-              }
-        }
-      }
-
-      leaf("t8") {
-        condition { it.ego.velocity.magnitude() > it.ego.lane.speedAt(it.ego.positionOnLane)}
-      }
+fun randomTSC(
+    size: Int
+): TSC<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds> = tsc {
+  all("TSCRoot") {
+    repeat(size) {
+      addEdge(
+          TSCEdge(
+              condition = { td -> td.unknownData[it].condition },
+              inverseCondition = { td -> td.unknownData[it].inverseCondition },
+              destination = TSCLeafNode("Leaf $it", emptyMap())))
     }
   }
+}
+
+fun simTSC(): TSC<Actor, TickData, TickDataUnitSeconds, TickDataDifferenceSeconds> = tsc {
+  all("TSCRoot") {
+    leaf("t3") {
+      condition {
+        exists(it.vehicles) { v ->
+          it.ego.boundingBox
+              .toBoundingBox2D()
+              .extendFront(minDistanceToFront((it.ego.velocity.magnitude())))
+              .collidesWith(v.boundingBox.toBoundingBox2D())
+        }
+      }
+      inverseCondition {
+        !exists(it.vehicles) { v ->
+          it.ego.boundingBox
+              .toBoundingBox2D()
+              .extendFront(it.ego.velocity.magnitude() * 3.6 / 2)
+              .collidesWith(
+                  v.boundingBox
+                      .toBoundingBox2D()) // Velocity in km/h divided in half ("half tacho value"))
+        }
+      }
+    }
+
+    leaf("t6") {
+      condition {
+        exists(it.vehicles) { v ->
+          v.lane.road == it.ego.lane.road && v.lane.laneId.sign == it.ego.lane.laneId.sign
+        }
+      }
+    }
+
+    leaf("t7") {
+      condition {
+        // Check that at least 10 seconds have passed
+        once(
+            it,
+            TickDataDifferenceSeconds(10.0)..TickDataDifferenceSeconds(Double.POSITIVE_INFINITY)) {
+              true
+            } &&
+
+            // Check that there is at least one vehicle in ego lane within 30m in front of ego
+            exists(it.vehicles) { v ->
+              historically(it, TickDataDifferenceSeconds(10.0)..TickDataDifferenceSeconds(10.0)) { t
+                ->
+                val v0 = t.vehicles.firstOrNull { v1 -> v1.id == v.id } ?: return@historically false
+
+                v0.lane == t.ego.lane &&
+                    v0.boundingBox
+                        .toBoundingBox2D()
+                        .collidesWith(it.ego.boundingBox.toBoundingBox2D().extendFront(30.0))
+              }
+            }
+      }
+    }
+
+    leaf("t8") {
+      condition { it.ego.velocity.magnitude() > it.ego.lane.speedAt(it.ego.positionOnLane) }
+    }
+  }
+}
 
 /*
  * UN-R 157 – 5.2.3.3
@@ -133,17 +149,17 @@ fun simTSC(): TSC<Actor, TickData, TickDataUnitSeconds, TickDataDifferenceSecond
  *
  * @param velocity the velocity of the vehicle in m/s.
  */
-//TODO: "Implementation is off. Interpolation between points must be applied"
+// TODO: "Implementation is off. Interpolation between points must be applied"
 @Suppress("MagicNumber")
 fun minDistanceToFront(velocity: Double): Double =
-  when (velocity) {
-    in 0.0 ..< 2.0 -> 2.0
-    in 2.0 ..< 7.2 -> velocity * 1.0
-    in 7.2 ..< 10.0 -> velocity * 1.1
-    in 10.0 ..< 20.0 -> velocity * 1.2
-    in 20.0 ..< 30.0 -> velocity * 1.3
-    in 30.0 ..< 40.0 -> velocity * 1.4
-    in 40.0 ..< 50.0 -> velocity * 1.5
-    in 50.0 ..< 60.0 -> velocity * 1.6
-    else -> velocity * 3.6 / 2 // Velocity in km/h divided in half ("half tacho value")
-  }
+    when (velocity) {
+      in 0.0..<2.0 -> 2.0
+      in 2.0..<7.2 -> velocity * 1.0
+      in 7.2..<10.0 -> velocity * 1.1
+      in 10.0..<20.0 -> velocity * 1.2
+      in 20.0..<30.0 -> velocity * 1.3
+      in 30.0..<40.0 -> velocity * 1.4
+      in 40.0..<50.0 -> velocity * 1.5
+      in 50.0..<60.0 -> velocity * 1.6
+      else -> velocity * 3.6 / 2 // Velocity in km/h divided in half ("half tacho value")
+    }
