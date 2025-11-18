@@ -20,8 +20,10 @@ package tools.aqua.stars.owa.coverage.metrics
 import tools.aqua.stars.core.metrics.providers.Plottable
 import tools.aqua.stars.core.types.EntityType
 import tools.aqua.stars.core.types.TickDataType
+import tools.aqua.stars.core.utils.getCSVString
 import tools.aqua.stars.core.utils.getPlot
 import tools.aqua.stars.core.utils.plotDataAsLineChart
+import tools.aqua.stars.core.utils.saveAsCSVFile
 import tools.aqua.stars.data.av.dataclasses.TickDataDifferenceSeconds
 import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
 import tools.aqua.stars.owa.coverage.dataclasses.Valuation
@@ -31,7 +33,7 @@ import tools.aqua.stars.owa.coverage.dataclasses.Valuation
 abstract class AbstractObservedInstancesMetric<
     E : EntityType<E, T, TickDataUnitSeconds, TickDataDifferenceSeconds>,
     T : TickDataType<E, T, TickDataUnitSeconds, TickDataDifferenceSeconds>,
->(val sampleSize: Int = 1, val maxSize: Int) : Plottable {
+>(val sampleSize: Int = 1, val maxSize: Int, private val identifier: String) : Plottable {
   protected var evaluatedInstances: Int = 0
   protected val t0 = System.currentTimeMillis()
 
@@ -61,7 +63,7 @@ abstract class AbstractObservedInstancesMetric<
   val minUncoverCount = mutableListOf<Int>()
 
   val gap: Double
-    get() =
+    get() = if (possibleInstanceCount.isEmpty()) 100.0 else
         (possibleInstanceCount.last() - certainInstanceCount.last()) /
             possibleInstanceCount.last().toDouble() * 100
 
@@ -221,6 +223,7 @@ abstract class AbstractObservedInstancesMetric<
           logScaleY = logY,
           fileName = "plot${if (logX) "_logX" else ""}${if (logY) "_logY" else ""}",
           folder = "ObservedInstancesMetric",
+          subFolder = identifier
       )
     }
   }
@@ -252,11 +255,53 @@ abstract class AbstractObservedInstancesMetric<
           logScaleY = logY,
           fileName = "timePlot${if (logX) "_logX" else ""}${if (logY) "_logY" else ""}",
           folder = "ObservedInstancesMetric",
+          subFolder = identifier
       )
     }
   }
 
   override fun writePlotDataCSV() {
-    
+    writeData()
+    writeSolverTime()
+  }
+
+  private fun writeData() {
+    val xValues = List(certainInstanceCount.size) { it * sampleSize }
+
+    val values: Map<String, Pair<List<Int>, List<Int>>> =
+      mapOf(
+        // "Upper Bound" to ,
+        "Observed Possible Instances (Upper bound)" to Pair(xValues, possibleInstanceCount),
+        "Observed Instances (MaxUnCover)" to Pair(xValues, maxUncoverCount),
+        "Observed real values" to Pair(xValues, realValueInstanceCount),
+        "Observed Instances (MinUnCover)" to Pair(xValues, minUncoverCount),
+        "Observed Certain Instances (Lower bound)" to Pair(xValues, certainInstanceCount))
+
+    saveAsCSVFile(
+      csvString = getCSVString(values),
+      fileName = "data",
+      folder = "ObservedInstancesMetric",
+      subFolder = identifier
+    )
+  }
+
+  private fun writeSolverTime() {
+    val xValues = List(minUnCoverZ3.totalTime.size) { it * sampleSize }
+
+    val values: Map<String, Pair<List<Int>, List<Long>>> =
+      mapOf(
+        "MinUnCover using Z3" to Pair(xValues, minUnCoverZ3.totalTime),
+        //            "MaxUnCover using Z3" to Pair(xValues, timeInMaxSAT),
+        "Maximum Cardinality Matching using Sparse Edmonds" to
+            Pair(xValues, maxUnCoverGraphBased.totalTimeInSparseEdmonds),
+        "Maximum Cardinality Matching using Hopcroft-Karp" to
+            Pair(xValues, maxUnCoverGraphBased.totalTimeInHopcroftKarp))
+
+    saveAsCSVFile(
+      csvString = getCSVString(values),
+      fileName = "time",
+      folder = "ObservedInstancesMetric",
+      subFolder = identifier
+    )
   }
 }

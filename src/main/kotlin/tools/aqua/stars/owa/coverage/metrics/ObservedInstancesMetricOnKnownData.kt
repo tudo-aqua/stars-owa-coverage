@@ -26,9 +26,9 @@ import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 
 /** @param sampleSize Number of segments to evaluate before updating the metric. */
 @Suppress("DuplicatedCode")
-class ObservedInstancesMetricOnKnownData(sampleSize: Int = 1, maxSize: Int) :
+class ObservedInstancesMetricOnKnownData(sampleSize: Int = 1, maxSize: Int, identifier: String) :
     AbstractObservedInstancesMetric<NoEntity, UnknownTickData>(
-        sampleSize = sampleSize, maxSize = maxSize),
+        sampleSize = sampleSize, maxSize = maxSize, identifier = identifier),
     TickMetricProvider<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds>,
     Plottable {
 

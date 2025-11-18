@@ -34,7 +34,7 @@ class ObservedInstancesMetricOnTickData(
     sampleSize: Int = 1,
     maxSize: Int = tsc.instanceCount.toInt()
 ) :
-    AbstractObservedInstancesMetric<Actor, TickData>(sampleSize = sampleSize, maxSize = maxSize),
+    AbstractObservedInstancesMetric<Actor, TickData>(sampleSize = sampleSize, maxSize = maxSize, identifier = "ObservedInstancesOnTickData"),
     TSCInstanceMetricProvider<Actor, TickData, TickDataUnitSeconds, TickDataDifferenceSeconds>,
     Plottable {
 

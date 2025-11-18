@@ -27,6 +27,7 @@ import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
 import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 import tools.aqua.stars.owa.coverage.dataclasses.Valuation
 import tools.aqua.stars.owa.coverage.metrics.ObservedInstancesMetricOnKnownData
+import kotlin.math.pow
 
 const val EXPERIMENT_SEED = 10101L
 
@@ -40,10 +41,10 @@ fun runMatrixExperiment() {
     6 to 1,
     7 to 1,
     8 to 10,
-    9 to 10,
-    10 to 100,
-    15 to 10_000,
-    20 to 1_000_000)
+    9 to 100,
+    10 to 1000,
+    15 to 100_000,
+    20 to 10_000_000)
   val probabilities = listOf(.10, .15, .20)
 
   tagsAndSampleSize.forEach { (numTags, sampleSize) ->
@@ -78,19 +79,19 @@ private fun runRandomExperimentWithConfig(
       "Running random experiment with configuration: numTags=$numTags, probability:$probability, maxTicks=$maxTicks, sampleSize=$sampleSize")
 
 
-  val maxSize = 2.ipow(numTags).toInt()
+  val maxSize = (2.0).pow(numTags).toInt()
 
   val tsc = randomTSC(size = numTags)
   val ticks = generateTicks(numTags = numTags, probability = probability, maxTicks = maxTicks, seed = seed)
-  val metric = ObservedInstancesMetricOnKnownData(sampleSize = sampleSize, maxSize = maxSize)
+  val metric = ObservedInstancesMetricOnKnownData(sampleSize = sampleSize, maxSize = maxSize, identifier = "n=${numTags}_p=${probability}")
 
-  TSCEvaluation(tscList = listOf(tsc))
+  TSCEvaluation(tscList = listOf(tsc), writePlots = true, writePlotDataCSV = true)
       .apply {
         clearHooks()
         registerMetricProviders(metric)
         registerPreTickEvaluationHooks(
             PreTickEvaluationHook("AbortHook") {
-              if ((metric.minUncoverCount.lastOrNull() ?: 0) < maxSize) EvaluationHookResult.OK
+              if (metric.gap > 0.0) EvaluationHookResult.OK
               else EvaluationHookResult.CANCEL
             })
       }
