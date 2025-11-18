@@ -17,6 +17,8 @@
 
 package tools.aqua.stars.owa.coverage
 
+import tools.aqua.stars.core.utils.ApplicationConstantsHolder
+
 const val ARGS_ERROR =
     "Expected arguments: \"sim\" OR \"rnd\" [numTags] [maxTicks] [probability] (seed)"
 
@@ -27,6 +29,9 @@ fun main(args: Array<String>) {
     "mtx" -> runMatrixExperiment()
     "rnd" -> runRandomExperiment(args.drop(1).toTypedArray())
     "sim" -> runSimulationExperiment()
-    else -> error(ARGS_ERROR)
+    else -> {
+      ApplicationConstantsHolder.logFolder = "/tmp/data/"
+      runMatrixExperiment()
+    }
   }
 }
