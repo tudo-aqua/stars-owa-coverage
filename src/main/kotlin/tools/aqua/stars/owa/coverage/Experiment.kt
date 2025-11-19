@@ -33,7 +33,7 @@ const val EXPERIMENT_SEED = 10101L
 val random = Random(EXPERIMENT_SEED)
 
 fun main() {
-    ApplicationConstantsHolder.logFolder = "/tmp/data/"
+    ApplicationConstantsHolder.logFolder = "/tmp/data"
 
     val tagsAndSampleSize = listOf(
       1 to 1,
