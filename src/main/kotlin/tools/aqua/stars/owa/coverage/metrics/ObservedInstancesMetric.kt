@@ -20,7 +20,6 @@ package tools.aqua.stars.owa.coverage.metrics
 import tools.aqua.stars.core.metrics.providers.Plottable
 import tools.aqua.stars.core.metrics.providers.TickMetricProvider
 import tools.aqua.stars.core.utils.ApplicationConstantsHolder
-import tools.aqua.stars.core.utils.getAndCreateCSVFolder
 import tools.aqua.stars.core.utils.getCSVString
 import tools.aqua.stars.core.utils.getPlot
 import tools.aqua.stars.core.utils.plotDataAsLineChart
@@ -30,7 +29,6 @@ import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
 import tools.aqua.stars.owa.coverage.dataclasses.NoEntity
 import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 import tools.aqua.stars.owa.coverage.dataclasses.Valuation
-import java.io.File
 
 /** @param sampleSize Number of segments to evaluate before updating the metric. */
 @Suppress("DuplicatedCode")
