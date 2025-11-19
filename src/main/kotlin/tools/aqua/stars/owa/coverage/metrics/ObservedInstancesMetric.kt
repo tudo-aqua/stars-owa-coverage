@@ -18,24 +18,25 @@
 package tools.aqua.stars.owa.coverage.metrics
 
 import tools.aqua.stars.core.metrics.providers.Plottable
-import tools.aqua.stars.core.types.EntityType
-import tools.aqua.stars.core.types.TickDataType
+import tools.aqua.stars.core.metrics.providers.TickMetricProvider
 import tools.aqua.stars.core.utils.getCSVString
 import tools.aqua.stars.core.utils.getPlot
 import tools.aqua.stars.core.utils.plotDataAsLineChart
 import tools.aqua.stars.core.utils.saveAsCSVFile
 import tools.aqua.stars.data.av.dataclasses.TickDataDifferenceSeconds
 import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
+import tools.aqua.stars.owa.coverage.dataclasses.NoEntity
+import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 import tools.aqua.stars.owa.coverage.dataclasses.Valuation
 
 /** @param sampleSize Number of segments to evaluate before updating the metric. */
 @Suppress("DuplicatedCode")
-abstract class AbstractObservedInstancesMetric<
-    E : EntityType<E, T, TickDataUnitSeconds, TickDataDifferenceSeconds>,
-    T : TickDataType<E, T, TickDataUnitSeconds, TickDataDifferenceSeconds>,
->(val sampleSize: Int = 1, val maxSize: Int, private val identifier: String) : Plottable {
-  protected var evaluatedInstances: Int = 0
-  protected val t0 = System.currentTimeMillis()
+class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val identifier: String) :
+    TickMetricProvider<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds>,
+    Plottable {
+
+  private var evaluatedInstances: Int = 0
+  private val t0 = System.currentTimeMillis()
 
   private val minUnCoverZ3 = MinUnCoverZ3()
   private val maxUnCoverZ3 = MaxUnCoverZ3()
@@ -64,11 +65,11 @@ abstract class AbstractObservedInstancesMetric<
 
   val gap: Double
     get() = if (possibleInstanceCount.isEmpty()) 100.0 else
-        (possibleInstanceCount.last() - certainInstanceCount.last()) /
-            possibleInstanceCount.last().toDouble() * 100
+      (possibleInstanceCount.last() - certainInstanceCount.last()) /
+          possibleInstanceCount.last().toDouble() * 100
 
-  fun evaluate(valuations: List<Valuation>) {
-    observedInstances.add(valuations) // Note: This is a set, so duplicates are ignored
+  override fun evaluate(tick: UnknownTickData) {
+    observedInstances.add(tick.unknownData) // Note: This is a set, so duplicates are ignored
     evaluatedInstances++
 
     // Update "raw" observedInstanceCount
@@ -145,11 +146,11 @@ abstract class AbstractObservedInstancesMetric<
    * Calculates the upper bound of the observed instances by replacing unknowns with both options.
    */
   private fun calculateUpperBound(powerLists: List<Pair<Bitmask, List<Bitmask>>>): Int =
-      powerLists.map { it.second }.flatten().toSet().size
+    powerLists.map { it.second }.flatten().toSet().size
 
   /** Calculates the count of distinct observed instances by their real values. */
   private fun calculateRealValue(): Int =
-      observedInstances.map { it.map { t -> t.realValue } }.toSet().size
+    observedInstances.map { it.map { t -> t.realValue } }.toSet().size
 
   /** Checks if the given List of conditions contains any unknowns. */
   private fun Bitmask.containsUnknown(): Boolean = any { it.isUnknown }
@@ -168,21 +169,21 @@ abstract class AbstractObservedInstancesMetric<
       val newPowerList = mutableListOf<Bitmask>()
       for (item in powerList) {
         newPowerList.add(
-            item.toMutableList().apply {
-              this[unknownIndex] =
-                  Valuation(
-                      condition = true,
-                      inverseCondition = false,
-                      realValue = this[unknownIndex].realValue)
-            })
+          item.toMutableList().apply {
+            this[unknownIndex] =
+              Valuation(
+                condition = true,
+                inverseCondition = false,
+                realValue = this[unknownIndex].realValue)
+          })
         newPowerList.add(
-            item.toMutableList().apply {
-              this[unknownIndex] =
-                  Valuation(
-                      condition = false,
-                      inverseCondition = true,
-                      realValue = this[unknownIndex].realValue)
-            })
+          item.toMutableList().apply {
+            this[unknownIndex] =
+              Valuation(
+                condition = false,
+                inverseCondition = true,
+                realValue = this[unknownIndex].realValue)
+          })
       }
 
       powerList = newPowerList
@@ -200,30 +201,30 @@ abstract class AbstractObservedInstancesMetric<
     val xValues = List(certainInstanceCount.size) { it * sampleSize }
 
     val values: Map<String, Pair<List<Int>, List<Int>>> =
-        mapOf(
-            // "Upper Bound" to ,
-            "Observed Possible Instances (Upper bound)" to Pair(xValues, possibleInstanceCount),
-            "Observed Instances (MaxUnCover)" to Pair(xValues, maxUncoverCount),
-            "Observed real values" to Pair(xValues, realValueInstanceCount),
-            "Observed Instances (MinUnCover)" to Pair(xValues, minUncoverCount),
-            "Observed Certain Instances (Lower bound)" to Pair(xValues, certainInstanceCount))
+      mapOf(
+        // "Upper Bound" to ,
+        "Observed Possible Instances (Upper bound)" to Pair(xValues, possibleInstanceCount),
+        "Observed Instances (MaxUnCover)" to Pair(xValues, maxUncoverCount),
+        "Observed real values" to Pair(xValues, realValueInstanceCount),
+        "Observed Instances (MinUnCover)" to Pair(xValues, minUncoverCount),
+        "Observed Certain Instances (Lower bound)" to Pair(xValues, certainInstanceCount))
 
     repeat(4) {
       val logX = it % 2 == 1
       val logY = it >= 2
 
       plotDataAsLineChart(
-          plot =
-              getPlot(
-                  nameToValuesMap = values,
-                  xAxisName = "Ticks",
-                  yAxisName = "Instance Count",
-                  legendHeader = "Legend"),
-          logScaleX = logX,
-          logScaleY = logY,
-          fileName = "plot${if (logX) "_logX" else ""}${if (logY) "_logY" else ""}",
-          folder = "ObservedInstancesMetric",
-          subFolder = identifier
+        plot =
+          getPlot(
+            nameToValuesMap = values,
+            xAxisName = "Ticks",
+            yAxisName = "Instance Count",
+            legendHeader = "Legend"),
+        logScaleX = logX,
+        logScaleY = logY,
+        fileName = "plot${if (logX) "_logX" else ""}${if (logY) "_logY" else ""}",
+        folder = "ObservedInstancesMetric",
+        subFolder = identifier
       )
     }
   }
@@ -232,30 +233,30 @@ abstract class AbstractObservedInstancesMetric<
     val xValues = List(minUnCoverZ3.totalTime.size) { it * sampleSize }
 
     val values: Map<String, Pair<List<Int>, List<Long>>> =
-        mapOf(
-            "MinUnCover using Z3" to Pair(xValues, minUnCoverZ3.totalTime),
-            //            "MaxUnCover using Z3" to Pair(xValues, timeInMaxSAT),
-            "Maximum Cardinality Matching using Sparse Edmonds" to
-                Pair(xValues, maxUnCoverGraphBased.totalTimeInSparseEdmonds),
-            "Maximum Cardinality Matching using Hopcroft-Karp" to
-                Pair(xValues, maxUnCoverGraphBased.totalTimeInHopcroftKarp))
+      mapOf(
+        "MinUnCover using Z3" to Pair(xValues, minUnCoverZ3.totalTime),
+        //            "MaxUnCover using Z3" to Pair(xValues, timeInMaxSAT),
+        "Maximum Cardinality Matching using Sparse Edmonds" to
+            Pair(xValues, maxUnCoverGraphBased.totalTimeInSparseEdmonds),
+        "Maximum Cardinality Matching using Hopcroft-Karp" to
+            Pair(xValues, maxUnCoverGraphBased.totalTimeInHopcroftKarp))
 
     repeat(4) {
       val logX = it % 2 == 1
       val logY = it >= 2
 
       plotDataAsLineChart(
-          plot =
-              getPlot(
-                  nameToValuesMap = values,
-                  xAxisName = "Ticks",
-                  yAxisName = "Time in ms",
-                  legendHeader = "Legend"),
-          logScaleX = logX,
-          logScaleY = logY,
-          fileName = "timePlot${if (logX) "_logX" else ""}${if (logY) "_logY" else ""}",
-          folder = "ObservedInstancesMetric",
-          subFolder = identifier
+        plot =
+          getPlot(
+            nameToValuesMap = values,
+            xAxisName = "Ticks",
+            yAxisName = "Time in ms",
+            legendHeader = "Legend"),
+        logScaleX = logX,
+        logScaleY = logY,
+        fileName = "timePlot${if (logX) "_logX" else ""}${if (logY) "_logY" else ""}",
+        folder = "ObservedInstancesMetric",
+        subFolder = identifier
       )
     }
   }
@@ -305,3 +306,4 @@ abstract class AbstractObservedInstancesMetric<
     )
   }
 }
+
