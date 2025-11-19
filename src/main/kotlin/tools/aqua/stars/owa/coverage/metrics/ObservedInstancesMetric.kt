@@ -19,6 +19,8 @@ package tools.aqua.stars.owa.coverage.metrics
 
 import tools.aqua.stars.core.metrics.providers.Plottable
 import tools.aqua.stars.core.metrics.providers.TickMetricProvider
+import tools.aqua.stars.core.utils.ApplicationConstantsHolder
+import tools.aqua.stars.core.utils.getAndCreateCSVFolder
 import tools.aqua.stars.core.utils.getCSVString
 import tools.aqua.stars.core.utils.getPlot
 import tools.aqua.stars.core.utils.plotDataAsLineChart
@@ -28,6 +30,7 @@ import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
 import tools.aqua.stars.owa.coverage.dataclasses.NoEntity
 import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 import tools.aqua.stars.owa.coverage.dataclasses.Valuation
+import java.io.File
 
 /** @param sampleSize Number of segments to evaluate before updating the metric. */
 @Suppress("DuplicatedCode")
@@ -111,13 +114,13 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val ide
       } else {
         val max1 = maxUnCoverGraphBased.calculateSparseEdmonds(powerLists)
         val max2 = maxUnCoverGraphBased.calculateHopcroftKarp(powerLists)
+        val max3 = maxUnCoverZ3.calculate(powerLists)
         check(max1 == max2) {
           "MaxUnCover using SparseEdmonds and Hopcroft-Karp should return the same result, but got $max1 and $max2"
         }
-        //val max3 = MaxUnCoverZ3.calculate(powerLists)
-        //check(max1 == max3) {
-        //  "MaxUnCover using Graph algorithm and SAT solver should return the same result but got $max1 and $max3"
-        //}
+        check(max1 == max3) {
+          "MaxUnCover using Graph algorithm and SAT solver should return the same result but got $max1 and $max3"
+        }
         maxUncoverCount.add(max1)
       }
       print(" | MaxUC: ${maxUncoverCount.last()} | Max: $maxSize   ||   Gap: ${String.format("%.2f", gap)} %")
@@ -278,6 +281,7 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val ide
         "Observed Instances (MinUnCover)" to Pair(xValues, minUncoverCount),
         "Observed Certain Instances (Lower bound)" to Pair(xValues, certainInstanceCount))
 
+    println("Saving to: ${ApplicationConstantsHolder.logFolder}/${ApplicationConstantsHolder.applicationStartTimeString}/csv/ObservedInstancesMetric/$identifier/data.csv")
     saveAsCSVFile(
       csvString = getCSVString(values),
       fileName = "data",
