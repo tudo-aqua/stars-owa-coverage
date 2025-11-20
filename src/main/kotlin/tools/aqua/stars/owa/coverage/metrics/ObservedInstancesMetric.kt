@@ -40,7 +40,6 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val ide
   private val t0 = System.currentTimeMillis()
 
   private val minUnCoverZ3 = MinUnCoverZ3()
-  private val maxUnCoverZ3 = MaxUnCoverZ3()
   private val maxUnCoverGraphBased = MaxUnCoverGraphBased()
 
   /** List of all observed instances including those containing unknowns */
@@ -108,16 +107,11 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val ide
         maxUncoverCount.add(maxSize)
         maxUnCoverGraphBased.totalTimeInSparseEdmonds.add(0L)
         maxUnCoverGraphBased.totalTimeInHopcroftKarp.add(0L)
-        maxUnCoverZ3.totalTime.add(0L)
       } else {
         val max1 = maxUnCoverGraphBased.calculateSparseEdmonds(powerLists)
         val max2 = maxUnCoverGraphBased.calculateHopcroftKarp(powerLists)
-        val max3 = maxUnCoverZ3.calculate(powerLists)
         check(max1 == max2) {
           "MaxUnCover using SparseEdmonds and Hopcroft-Karp should return the same result, but got $max1 and $max2"
-        }
-        check(max1 == max3) {
-          "MaxUnCover using Graph algorithm and SAT solver should return the same result but got $max1 and $max3"
         }
         maxUncoverCount.add(max1)
       }
@@ -127,12 +121,11 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val ide
       // Log current status
       val t = (System.currentTimeMillis() - t0) / 1000.0
       val tMinSat = minUnCoverZ3.totalTime.sum() / 1000.0
-      val tMaxSat = maxUnCoverZ3.totalTime.sum() / 1000.0
       val tSparse = maxUnCoverGraphBased.totalTimeInSparseEdmonds.sum() / 1000.0
       val tHopcroft = maxUnCoverGraphBased.totalTimeInHopcroftKarp.sum() / 1000.0
       print("   ||   Time: ${String.format("%.2f", t)} s   ")
       print("| Time in MinUnCover (SAT): ${String.format("%.2f", tMinSat)} s (${String.format("%.2f", tMinSat * 100 / t)} %) ")
-      print("| Time in MaxUnCover (Sparse / Hopcroft-Karp / SAT): ${String.format("%.2f", tSparse)} s (${String.format("%.2f", tSparse * 100 / t)} %) / ${String.format("%.2f", tHopcroft)} s (${String.format("%.2f", tHopcroft * 100 / t)} %) / ${String.format("%.2f", tMaxSat)} s (${String.format("%.2f", tMaxSat * 100 / t)} %)")
+      print("| Time in MaxUnCover (Sparse / Hopcroft-Karp / SAT): ${String.format("%.2f", tSparse)} s (${String.format("%.2f", tSparse * 100 / t)} %) / ${String.format("%.2f", tHopcroft)} s (${String.format("%.2f", tHopcroft * 100 / t)} %))")
       println()
     }
   }
