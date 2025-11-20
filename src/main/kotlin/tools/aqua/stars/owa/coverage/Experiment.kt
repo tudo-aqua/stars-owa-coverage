@@ -48,7 +48,7 @@ fun main() {
       10 to 1000,
       15 to 100_000,
       20 to 10_000_000)
-    val probabilities = listOf(.5, .10, .15, .20)
+    val probabilities = listOf(.05, .10, .15, .20)
 
     tagsAndSampleSize.forEach { (numTags, sampleSize) ->
       for (numOpenTags in 1 .. numTags) {
