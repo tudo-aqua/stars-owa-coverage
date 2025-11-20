@@ -74,6 +74,7 @@ private fun runExperimentWithConfig(
   probability: Double
 ) {
   val numTags = numOpenTags + numClosedTags
+  val identifier = "no=${numOpenTags}_nc=${numClosedTags}_p=${probability}"
 
   println(
     "Running random experiment with configuration: numOpenTags=$numOpenTags, numClosedTags=$numClosedTags, probability:$probability, sampleSize=$sampleSize")
@@ -85,10 +86,10 @@ private fun runExperimentWithConfig(
   val metric = ObservedInstancesMetric(
     sampleSize = sampleSize,
     maxSize = maxSize,
-    identifier = "no=${numOpenTags}_nc=${numClosedTags}_p=${probability}"
+    identifier = identifier
   )
 
-  TSCEvaluation(tscList = listOf(tsc), writePlots = true, writePlotDataCSV = true)
+  TSCEvaluation(tscList = listOf(tsc), writePlots = true, writePlotDataCSV = true, loggerIdentifier = identifier)
     .apply {
       clearHooks()
       registerMetricProviders(metric)
