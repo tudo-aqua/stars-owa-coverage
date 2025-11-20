@@ -40,8 +40,6 @@ plugins {
   id("com.diffplug.spotless") version "7.0.2"
 }
 
-// val starsVersion = "2.0-owa-coverage-on-tickwise-evaluation-2-61819ce-SNAPSHOT"
-
 repositories {
   mavenCentral()
 
@@ -51,9 +49,6 @@ repositories {
 dependencies {
   testImplementation(kotlin("test"))
   implementation(group = "tools.aqua", name = "stars-core")
-  implementation(group = "tools.aqua", name = "stars-logic-kcmftbl")
-  implementation(group = "tools.aqua", name = "stars-data-av")
-  implementation(group = "tools.aqua", name = "stars-importer-carla")
   implementation(group = "org.ow2.sat4j", name = "org.ow2.sat4j.maxsat", version = "2.3.6")
   implementation(group = "tools.aqua", name = "z3-turnkey", version = "4.13.0.1")
   implementation(group = "org.jgrapht", name = "jgrapht-core", version = "1.5.2")

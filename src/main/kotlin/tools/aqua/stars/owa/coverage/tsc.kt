@@ -21,14 +21,12 @@ import tools.aqua.stars.core.tsc.TSC
 import tools.aqua.stars.core.tsc.builder.tsc
 import tools.aqua.stars.core.tsc.edge.TSCEdge
 import tools.aqua.stars.core.tsc.node.TSCLeafNode
-import tools.aqua.stars.data.av.dataclasses.TickDataDifferenceSeconds
-import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
+import tools.aqua.stars.owa.coverage.dataclasses.IndexTickDifference
+import tools.aqua.stars.owa.coverage.dataclasses.IndexTickUnit
 import tools.aqua.stars.owa.coverage.dataclasses.NoEntity
 import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 
-fun randomTSC(
-    size: Int
-): TSC<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds> = tsc {
+fun randomTSC(size: Int): TSC<NoEntity, UnknownTickData, IndexTickUnit, IndexTickDifference> = tsc {
   all("TSCRoot") {
     repeat(size) {
       addEdge(

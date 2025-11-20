@@ -24,8 +24,8 @@ import tools.aqua.stars.core.utils.getCSVString
 import tools.aqua.stars.core.utils.getPlot
 import tools.aqua.stars.core.utils.plotDataAsLineChart
 import tools.aqua.stars.core.utils.saveAsCSVFile
-import tools.aqua.stars.data.av.dataclasses.TickDataDifferenceSeconds
-import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
+import tools.aqua.stars.owa.coverage.dataclasses.IndexTickDifference
+import tools.aqua.stars.owa.coverage.dataclasses.IndexTickUnit
 import tools.aqua.stars.owa.coverage.dataclasses.NoEntity
 import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 import tools.aqua.stars.owa.coverage.dataclasses.Valuation
@@ -33,8 +33,7 @@ import tools.aqua.stars.owa.coverage.dataclasses.Valuation
 /** @param sampleSize Number of segments to evaluate before updating the metric. */
 @Suppress("DuplicatedCode")
 class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val identifier: String) :
-    TickMetricProvider<NoEntity, UnknownTickData, TickDataUnitSeconds, TickDataDifferenceSeconds>,
-    Plottable {
+    TickMetricProvider<NoEntity, UnknownTickData, IndexTickUnit, IndexTickDifference>, Plottable {
 
   private var evaluatedInstances: Int = 0
   private val t0 = System.currentTimeMillis()
@@ -64,9 +63,11 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val ide
   val minUncoverCount = mutableListOf<Int>()
 
   val gap: Double
-    get() = if (possibleInstanceCount.isEmpty()) 100.0 else
-      (possibleInstanceCount.last() - certainInstanceCount.last()) /
-          possibleInstanceCount.last().toDouble() * 100
+    get() =
+        if (possibleInstanceCount.isEmpty()) 100.0
+        else
+            (possibleInstanceCount.last() - certainInstanceCount.last()) /
+                possibleInstanceCount.last().toDouble() * 100
 
   override fun evaluate(tick: UnknownTickData) {
     observedInstances.add(tick.unknownData) // Note: This is a set, so duplicates are ignored
@@ -115,8 +116,8 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val ide
         }
         maxUncoverCount.add(max1)
       }
-      print(" | MaxUC: ${maxUncoverCount.last()} | Max: $maxSize   ||   Gap: ${String.format("%.2f", gap)} %")
-
+      print(
+          " | MaxUC: ${maxUncoverCount.last()} | Max: $maxSize   ||   Gap: ${String.format("%.2f", gap)} %")
 
       // Log current status
       val t = (System.currentTimeMillis() - t0) / 1000.0
@@ -124,8 +125,10 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val ide
       val tSparse = maxUnCoverGraphBased.totalTimeInSparseEdmonds.sum() / 1000.0
       val tHopcroft = maxUnCoverGraphBased.totalTimeInHopcroftKarp.sum() / 1000.0
       print("   ||   Time: ${String.format("%.2f", t)} s   ")
-      print("| Time in MinUnCover (SAT): ${String.format("%.2f", tMinSat)} s (${String.format("%.2f", tMinSat * 100 / t)} %) ")
-      print("| Time in MaxUnCover (Sparse / Hopcroft-Karp / SAT): ${String.format("%.2f", tSparse)} s (${String.format("%.2f", tSparse * 100 / t)} %) / ${String.format("%.2f", tHopcroft)} s (${String.format("%.2f", tHopcroft * 100 / t)} %))")
+      print(
+          "| Time in MinUnCover (SAT): ${String.format("%.2f", tMinSat)} s (${String.format("%.2f", tMinSat * 100 / t)} %) ")
+      print(
+          "| Time in MaxUnCover (Sparse / Hopcroft-Karp / SAT): ${String.format("%.2f", tSparse)} s (${String.format("%.2f", tSparse * 100 / t)} %) / ${String.format("%.2f", tHopcroft)} s (${String.format("%.2f", tHopcroft * 100 / t)} %))")
       println()
     }
   }
@@ -140,11 +143,11 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val ide
    * Calculates the upper bound of the observed instances by replacing unknowns with both options.
    */
   private fun calculateUpperBound(powerLists: List<Pair<Bitmask, List<Bitmask>>>): Int =
-    powerLists.map { it.second }.flatten().toSet().size
+      powerLists.map { it.second }.flatten().toSet().size
 
   /** Calculates the count of distinct observed instances by their real values. */
   private fun calculateRealValue(): Int =
-    observedInstances.map { it.map { t -> t.realValue } }.toSet().size
+      observedInstances.map { it.map { t -> t.realValue } }.toSet().size
 
   /** Checks if the given List of conditions contains any unknowns. */
   private fun Bitmask.containsUnknown(): Boolean = any { it.isUnknown }
@@ -163,21 +166,21 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val ide
       val newPowerList = mutableListOf<Bitmask>()
       for (item in powerList) {
         newPowerList.add(
-          item.toMutableList().apply {
-            this[unknownIndex] =
-              Valuation(
-                condition = true,
-                inverseCondition = false,
-                realValue = this[unknownIndex].realValue)
-          })
+            item.toMutableList().apply {
+              this[unknownIndex] =
+                  Valuation(
+                      condition = true,
+                      inverseCondition = false,
+                      realValue = this[unknownIndex].realValue)
+            })
         newPowerList.add(
-          item.toMutableList().apply {
-            this[unknownIndex] =
-              Valuation(
-                condition = false,
-                inverseCondition = true,
-                realValue = this[unknownIndex].realValue)
-          })
+            item.toMutableList().apply {
+              this[unknownIndex] =
+                  Valuation(
+                      condition = false,
+                      inverseCondition = true,
+                      realValue = this[unknownIndex].realValue)
+            })
       }
 
       powerList = newPowerList
@@ -195,31 +198,30 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val ide
     val xValues = List(certainInstanceCount.size) { it * sampleSize }
 
     val values: Map<String, Pair<List<Int>, List<Int>>> =
-      mapOf(
-        // "Upper Bound" to ,
-        "Observed Possible Instances (Upper bound)" to Pair(xValues, possibleInstanceCount),
-        "Observed Instances (MaxUnCover)" to Pair(xValues, maxUncoverCount),
-        "Observed real values" to Pair(xValues, realValueInstanceCount),
-        "Observed Instances (MinUnCover)" to Pair(xValues, minUncoverCount),
-        "Observed Certain Instances (Lower bound)" to Pair(xValues, certainInstanceCount))
+        mapOf(
+            // "Upper Bound" to ,
+            "Observed Possible Instances (Upper bound)" to Pair(xValues, possibleInstanceCount),
+            "Observed Instances (MaxUnCover)" to Pair(xValues, maxUncoverCount),
+            "Observed real values" to Pair(xValues, realValueInstanceCount),
+            "Observed Instances (MinUnCover)" to Pair(xValues, minUncoverCount),
+            "Observed Certain Instances (Lower bound)" to Pair(xValues, certainInstanceCount))
 
     repeat(4) {
       val logX = it % 2 == 1
       val logY = it >= 2
 
       plotDataAsLineChart(
-        plot =
-          getPlot(
-            nameToValuesMap = values,
-            xAxisName = "Ticks",
-            yAxisName = "Instance Count",
-            legendHeader = "Legend"),
-        logScaleX = logX,
-        logScaleY = logY,
-        fileName = "plot${if (logX) "_logX" else ""}${if (logY) "_logY" else ""}",
-        folder = "ObservedInstancesMetric",
-        subFolder = identifier
-      )
+          plot =
+              getPlot(
+                  nameToValuesMap = values,
+                  xAxisName = "Ticks",
+                  yAxisName = "Instance Count",
+                  legendHeader = "Legend"),
+          logScaleX = logX,
+          logScaleY = logY,
+          fileName = "plot${if (logX) "_logX" else ""}${if (logY) "_logY" else ""}",
+          folder = "ObservedInstancesMetric",
+          subFolder = identifier)
     }
   }
 
@@ -227,31 +229,30 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val ide
     val xValues = List(minUnCoverZ3.totalTime.size) { it * sampleSize }
 
     val values: Map<String, Pair<List<Int>, List<Long>>> =
-      mapOf(
-        "MinUnCover using Z3" to Pair(xValues, minUnCoverZ3.totalTime),
-        //            "MaxUnCover using Z3" to Pair(xValues, timeInMaxSAT),
-        "Maximum Cardinality Matching using Sparse Edmonds" to
-            Pair(xValues, maxUnCoverGraphBased.totalTimeInSparseEdmonds),
-        "Maximum Cardinality Matching using Hopcroft-Karp" to
-            Pair(xValues, maxUnCoverGraphBased.totalTimeInHopcroftKarp))
+        mapOf(
+            "MinUnCover using Z3" to Pair(xValues, minUnCoverZ3.totalTime),
+            //            "MaxUnCover using Z3" to Pair(xValues, timeInMaxSAT),
+            "Maximum Cardinality Matching using Sparse Edmonds" to
+                Pair(xValues, maxUnCoverGraphBased.totalTimeInSparseEdmonds),
+            "Maximum Cardinality Matching using Hopcroft-Karp" to
+                Pair(xValues, maxUnCoverGraphBased.totalTimeInHopcroftKarp))
 
     repeat(4) {
       val logX = it % 2 == 1
       val logY = it >= 2
 
       plotDataAsLineChart(
-        plot =
-          getPlot(
-            nameToValuesMap = values,
-            xAxisName = "Ticks",
-            yAxisName = "Time in ms",
-            legendHeader = "Legend"),
-        logScaleX = logX,
-        logScaleY = logY,
-        fileName = "timePlot${if (logX) "_logX" else ""}${if (logY) "_logY" else ""}",
-        folder = "ObservedInstancesMetric",
-        subFolder = identifier
-      )
+          plot =
+              getPlot(
+                  nameToValuesMap = values,
+                  xAxisName = "Ticks",
+                  yAxisName = "Time in ms",
+                  legendHeader = "Legend"),
+          logScaleX = logX,
+          logScaleY = logY,
+          fileName = "timePlot${if (logX) "_logX" else ""}${if (logY) "_logY" else ""}",
+          folder = "ObservedInstancesMetric",
+          subFolder = identifier)
     }
   }
 
@@ -264,41 +265,39 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val ide
     val xValues = List(certainInstanceCount.size) { it * sampleSize }
 
     val values: Map<String, Pair<List<Int>, List<Int>>> =
-      mapOf(
-        // "Upper Bound" to ,
-        "Observed Possible Instances (Upper bound)" to Pair(xValues, possibleInstanceCount),
-        "Observed Instances (MaxUnCover)" to Pair(xValues, maxUncoverCount),
-        "Observed real values" to Pair(xValues, realValueInstanceCount),
-        "Observed Instances (MinUnCover)" to Pair(xValues, minUncoverCount),
-        "Observed Certain Instances (Lower bound)" to Pair(xValues, certainInstanceCount))
+        mapOf(
+            // "Upper Bound" to ,
+            "Observed Possible Instances (Upper bound)" to Pair(xValues, possibleInstanceCount),
+            "Observed Instances (MaxUnCover)" to Pair(xValues, maxUncoverCount),
+            "Observed real values" to Pair(xValues, realValueInstanceCount),
+            "Observed Instances (MinUnCover)" to Pair(xValues, minUncoverCount),
+            "Observed Certain Instances (Lower bound)" to Pair(xValues, certainInstanceCount))
 
-    println("Saving to: ${ApplicationConstantsHolder.logFolder}/${ApplicationConstantsHolder.applicationStartTimeString}/csv/ObservedInstancesMetric/$identifier/data.csv")
+    println(
+        "Saving to: ${ApplicationConstantsHolder.logFolder}/${ApplicationConstantsHolder.applicationStartTimeString}/csv/ObservedInstancesMetric/$identifier/data.csv")
     saveAsCSVFile(
-      csvString = getCSVString(values),
-      fileName = "data",
-      folder = "ObservedInstancesMetric",
-      subFolder = identifier
-    )
+        csvString = getCSVString(values),
+        fileName = "data",
+        folder = "ObservedInstancesMetric",
+        subFolder = identifier)
   }
 
   private fun writeSolverTime() {
     val xValues = List(minUnCoverZ3.totalTime.size) { it * sampleSize }
 
     val values: Map<String, Pair<List<Int>, List<Long>>> =
-      mapOf(
-        "MinUnCover using Z3" to Pair(xValues, minUnCoverZ3.totalTime),
-        //            "MaxUnCover using Z3" to Pair(xValues, timeInMaxSAT),
-        "Maximum Cardinality Matching using Sparse Edmonds" to
-            Pair(xValues, maxUnCoverGraphBased.totalTimeInSparseEdmonds),
-        "Maximum Cardinality Matching using Hopcroft-Karp" to
-            Pair(xValues, maxUnCoverGraphBased.totalTimeInHopcroftKarp))
+        mapOf(
+            "MinUnCover using Z3" to Pair(xValues, minUnCoverZ3.totalTime),
+            //            "MaxUnCover using Z3" to Pair(xValues, timeInMaxSAT),
+            "Maximum Cardinality Matching using Sparse Edmonds" to
+                Pair(xValues, maxUnCoverGraphBased.totalTimeInSparseEdmonds),
+            "Maximum Cardinality Matching using Hopcroft-Karp" to
+                Pair(xValues, maxUnCoverGraphBased.totalTimeInHopcroftKarp))
 
     saveAsCSVFile(
-      csvString = getCSVString(values),
-      fileName = "time",
-      folder = "ObservedInstancesMetric",
-      subFolder = identifier
-    )
+        csvString = getCSVString(values),
+        fileName = "time",
+        folder = "ObservedInstancesMetric",
+        subFolder = identifier)
   }
 }
-

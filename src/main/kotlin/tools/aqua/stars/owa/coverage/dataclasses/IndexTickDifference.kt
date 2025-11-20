@@ -17,18 +17,19 @@
 
 package tools.aqua.stars.owa.coverage.dataclasses
 
-import tools.aqua.stars.core.types.EntityType
+import tools.aqua.stars.core.types.TickDifference
 
-class NoEntity(val tickData: UnknownTickData) :
-    EntityType<NoEntity, UnknownTickData, IndexTickUnit, IndexTickDifference>() {
+class IndexTickDifference(val difference: Int) : TickDifference<IndexTickDifference>() {
+  override fun plus(other: IndexTickDifference): IndexTickDifference =
+      IndexTickDifference(this.difference + other.difference)
 
-  val id: Int = -1
+  override fun minus(other: IndexTickDifference): IndexTickDifference =
+      IndexTickDifference(this.difference - other.difference)
 
-  override fun equals(other: Any?): Boolean {
-    if (this === other) return true
-    if (other !is NoEntity) return false
-    return id == other.id && tickData == other.tickData
-  }
+  override fun compareTo(other: IndexTickDifference): Int =
+      this.difference.compareTo(other.difference)
 
-  override fun hashCode(): Int = id * 31 + tickData.hashCode()
+  override fun serialize(): String = difference.toString()
+
+  override fun deserialize(str: String): IndexTickDifference = IndexTickDifference(str.toInt())
 }

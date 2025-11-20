@@ -17,46 +17,51 @@
 
 package tools.aqua.stars.owa.coverage
 
+import kotlin.math.pow
+import kotlin.random.Random
 import tools.aqua.stars.core.evaluation.TSCEvaluation
 import tools.aqua.stars.core.evaluation.TickSequence
 import tools.aqua.stars.core.hooks.EvaluationHookResult
 import tools.aqua.stars.core.hooks.PreTickEvaluationHook
 import tools.aqua.stars.core.utils.ApplicationConstantsHolder
-import tools.aqua.stars.data.av.dataclasses.TickDataUnitSeconds
+import tools.aqua.stars.owa.coverage.dataclasses.IndexTickUnit
 import tools.aqua.stars.owa.coverage.dataclasses.UnknownTickData
 import tools.aqua.stars.owa.coverage.dataclasses.Valuation
 import tools.aqua.stars.owa.coverage.metrics.ObservedInstancesMetric
-import kotlin.math.pow
-import kotlin.random.Random
 
 const val EXPERIMENT_SEED = 10101L
 val random = Random(EXPERIMENT_SEED)
 
 fun main() {
-    ApplicationConstantsHolder.logFolder = "/tmp/data"
+  ApplicationConstantsHolder.logFolder = "/tmp/data"
 
-    val tagsAndSampleSize = listOf(
-      1 to 1,
-      2 to 1,
-      3 to 1,
-      4 to 1,
-      5 to 1,
-      6 to 1,
-      7 to 1,
-      8 to 10,
-      9 to 100,
-      10 to 1000,
-      15 to 100_000,
-      20 to 10_000_000)
-    val probabilities = listOf(.05, .10, .15, .20)
+  val tagsAndSampleSize =
+      listOf(
+          1 to 1,
+          2 to 1,
+          3 to 1,
+          4 to 1,
+          5 to 1,
+          6 to 1,
+          7 to 1,
+          8 to 10,
+          9 to 100,
+          10 to 1000,
+          15 to 100_000,
+          20 to 10_000_000)
+  val probabilities = listOf(.05, .10, .15, .20)
 
-    tagsAndSampleSize.forEach { (numTags, sampleSize) ->
-      for (numOpenTags in 1 .. numTags) {
-        probabilities.forEach { probability ->
-          runExperimentWithConfig(numOpenTags = numOpenTags, numClosedTags = numTags - numOpenTags, sampleSize = sampleSize, probability = probability)
-        }
+  tagsAndSampleSize.forEach { (numTags, sampleSize) ->
+    for (numOpenTags in 1..numTags) {
+      probabilities.forEach { probability ->
+        runExperimentWithConfig(
+            numOpenTags = numOpenTags,
+            numClosedTags = numTags - numOpenTags,
+            sampleSize = sampleSize,
+            probability = probability)
       }
     }
+  }
 }
 
 /**
@@ -68,83 +73,87 @@ fun main() {
  * @param probability Probability of generating an unknown observation for open tags.
  */
 private fun runExperimentWithConfig(
-  numOpenTags: Int,
-  numClosedTags: Int,
-  sampleSize: Int,
-  probability: Double
+    numOpenTags: Int,
+    numClosedTags: Int,
+    sampleSize: Int,
+    probability: Double
 ) {
   val numTags = numOpenTags + numClosedTags
   val identifier = "no=${numOpenTags}_nc=${numClosedTags}_p=${probability}"
 
   println(
-    "Running random experiment with configuration: numOpenTags=$numOpenTags, numClosedTags=$numClosedTags, probability:$probability, sampleSize=$sampleSize")
+      "Running random experiment with configuration: numOpenTags=$numOpenTags, numClosedTags=$numClosedTags, probability:$probability, sampleSize=$sampleSize")
 
   val maxSize = (2.0).pow(numTags).toInt()
 
   val tsc = randomTSC(size = numTags)
-  val ticks = generateTicks(numOpenTags = numOpenTags, numClosedTags = numClosedTags, probability = probability)
-  val metric = ObservedInstancesMetric(
-    sampleSize = sampleSize,
-    maxSize = maxSize,
-    identifier = identifier
-  )
+  val ticks =
+      generateTicks(
+          numOpenTags = numOpenTags, numClosedTags = numClosedTags, probability = probability)
+  val metric =
+      ObservedInstancesMetric(sampleSize = sampleSize, maxSize = maxSize, identifier = identifier)
 
-  TSCEvaluation(tscList = listOf(tsc), writePlots = true, writePlotDataCSV = true, loggerIdentifier = identifier)
-    .apply {
-      clearHooks()
-      registerMetricProviders(metric)
-      registerPreTickEvaluationHooks(
-        PreTickEvaluationHook("AbortHook") {
-          if ((metric.minUncoverCount.lastOrNull() ?: 0) < maxSize) EvaluationHookResult.OK
-          else EvaluationHookResult.CANCEL
-        })
-    }
-    .runEvaluation(ticks = sequenceOf(ticks))
+  TSCEvaluation(
+          tscList = listOf(tsc),
+          writePlots = true,
+          writePlotDataCSV = true,
+          loggerIdentifier = identifier)
+      .apply {
+        clearHooks()
+        registerMetricProviders(metric)
+        registerPreTickEvaluationHooks(
+            PreTickEvaluationHook("AbortHook") {
+              if ((metric.minUncoverCount.lastOrNull() ?: 0) < maxSize) EvaluationHookResult.OK
+              else EvaluationHookResult.CANCEL
+            })
+      }
+      .runEvaluation(ticks = sequenceOf(ticks))
 }
 
 @Suppress("SameParameterValue")
 private fun generateTicks(
-  numOpenTags: Int,
-  numClosedTags: Int,
-  probability: Double,
+    numOpenTags: Int,
+    numClosedTags: Int,
+    probability: Double,
 ): TickSequence<UnknownTickData> {
   var index = 0
   return TickSequence {
     UnknownTickData(
-      currentTick = TickDataUnitSeconds(index.toDouble()),
-      unknownData = generateTags(numOpenTags, true, probability) + generateTags(numClosedTags, false, probability)
-    ).also {
-      @Suppress("AssignedValueIsNeverRead") // Variable is used in the generator
-      index++
-    }
+            currentTick = IndexTickUnit(index),
+            unknownData =
+                generateTags(numOpenTags, true, probability) +
+                    generateTags(numClosedTags, false, probability))
+        .also {
+          @Suppress("AssignedValueIsNeverRead") // Variable is used in the generator
+          index++
+        }
   }
 }
 
 /**
- * Generates #[numTags] tags. If [isOpen] is `true`, then the tag is unknown with a probability of [probability].
- * The value `true`/`false` is generated 50/50.
+ * Generates #[numTags] tags. If [isOpen] is `true`, then the tag is unknown with a probability of
+ * [probability]. The value `true`/`false` is generated 50/50.
  *
  * @param numTags The number of tags to generate.
  * @param isOpen Whether to generate unknown observations with a probability of [probability].
- *
  */
-private fun generateTags(numTags: Int, isOpen: Boolean, probability: Double) : List<Valuation> =
-  (0 until numTags).map {
-    val valuation: Boolean
-    val inverse: Boolean
-    val realValue: Boolean
+private fun generateTags(numTags: Int, isOpen: Boolean, probability: Double): List<Valuation> =
+    (0 until numTags).map {
+      val valuation: Boolean
+      val inverse: Boolean
+      val realValue: Boolean
 
-    if (isOpen && random.nextDouble() < probability) {
-      // Generate unknown
-      valuation = false
-      inverse = false
-      realValue = random.nextDouble() < .5
-    } else {
-      // Generate known
-      valuation = random.nextDouble() < .5
-      inverse = !valuation
-      realValue = valuation
+      if (isOpen && random.nextDouble() < probability) {
+        // Generate unknown
+        valuation = false
+        inverse = false
+        realValue = random.nextDouble() < .5
+      } else {
+        // Generate known
+        valuation = random.nextDouble() < .5
+        inverse = !valuation
+        realValue = valuation
+      }
+
+      Valuation(condition = valuation, inverseCondition = inverse, realValue = realValue)
     }
-
-    Valuation(condition = valuation, inverseCondition = inverse, realValue = realValue)
-  }
