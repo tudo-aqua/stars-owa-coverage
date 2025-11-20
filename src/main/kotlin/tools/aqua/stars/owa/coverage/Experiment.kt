@@ -48,7 +48,7 @@ fun main() {
       10 to 1000,
       15 to 100_000,
       20 to 10_000_000)
-    val probabilities = listOf(.10, .15, .20)
+    val probabilities = listOf(.5, .10, .15, .20)
 
     tagsAndSampleSize.forEach { (numTags, sampleSize) ->
       for (numOpenTags in 1 .. numTags) {
@@ -121,10 +121,10 @@ private fun generateTicks(
 }
 
 /**
- * Generates #[numTags] tags. If [isOpen] is `true`, then the tag is unknown with ab probability of [probability].
+ * Generates #[numTags] tags. If [isOpen] is `true`, then the tag is unknown with a probability of [probability].
  * The value `true`/`false` is generated 50/50.
  *
- * @param numTags The number of Tags to generate.
+ * @param numTags The number of tags to generate.
  * @param isOpen Whether to generate unknown observations with a probability of [probability].
  *
  */
