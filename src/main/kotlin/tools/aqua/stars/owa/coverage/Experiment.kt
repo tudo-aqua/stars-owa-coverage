@@ -35,33 +35,33 @@ val random = Random(EXPERIMENT_SEED)
 fun main() {
   ApplicationConstantsHolder.logFolder = "/tmp/data"
 
-  val tagsAndSampleSize =
-      listOf(
-          1 to 1,
-          2 to 1,
-          3 to 1,
-          4 to 1,
-          5 to 1,
-          6 to 1,
-          7 to 1,
-          8 to 10,
-          9 to 100,
-          10 to 1000,
-          15 to 10_000,
-          20 to 100_000)
+//  val tagsAndSampleSize =
+//      listOf(
+//          1 to 1,
+//          2 to 1,
+//          3 to 1,
+//          4 to 1,
+//          5 to 1,
+//          6 to 1,
+//          7 to 1,
+//          8 to 10,
+//          9 to 100,
+//          10 to 1000,
+//          15 to 10_000,
+//          20 to 100_000)
   val probabilities = listOf(.05, .10, .15, .20)
 
-  tagsAndSampleSize.forEach { (numTags, sampleSize) ->
-    for (numOpenTags in 1..numTags) {
-      probabilities.forEach { probability ->
+//  tagsAndSampleSize.forEach { (numTags, sampleSize) ->
+  probabilities.forEach { probability ->
+    for (closedTags in 0..100) {
         runExperimentWithConfig(
-            numOpenTags = numOpenTags,
-            numClosedTags = numTags - numOpenTags,
-            sampleSize = sampleSize,
+            numOpenTags = 10,
+            numClosedTags = closedTags,
+            sampleSize = 1000,
             probability = probability)
       }
     }
-  }
+//  }
 }
 
 /**
