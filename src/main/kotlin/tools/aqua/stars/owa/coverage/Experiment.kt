@@ -52,22 +52,21 @@ fun main() {
           13 to 10_000,
           14 to 10_000,
           15 to 100_000,
-          16 to 100_000,
-          17 to 1_000_000,
-          18 to 1_000_000,
-          19 to 10_000_000,
-          20 to 10_000_000
       )
 
   val probabilities = listOf(.05, .10, .15, .20)
 
   tagsAndSampleSize.forEach { (numTags, sampleSize) ->
-    probabilities.forEach { probability ->
+    for(probability in probabilities) {
+
+      if (probability == .2 && numTags >= 14)
+        continue
+
       runExperimentWithConfig(
-          numOpenTags = numTags,
-          numClosedTags = 0,
-          sampleSize = sampleSize,
-          probability = probability)
+        numOpenTags = numTags,
+        numClosedTags = 0,
+        sampleSize = sampleSize,
+        probability = probability)
     }
   }
 }
