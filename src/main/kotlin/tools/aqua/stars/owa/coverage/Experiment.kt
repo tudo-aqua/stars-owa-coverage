@@ -47,19 +47,27 @@ fun main() {
           8 to 10,
           9 to 100,
           10 to 1000,
+          11 to 1000,
+          12 to 1000,
+          13 to 10_000,
+          14 to 10_000,
           15 to 100_000,
-          20 to 10_000_000)
+          16 to 100_000,
+          17 to 1_000_000,
+          18 to 1_000_000,
+          19 to 10_000_000,
+          20 to 10_000_000
+      )
+
   val probabilities = listOf(.05, .10, .15, .20)
 
   tagsAndSampleSize.forEach { (numTags, sampleSize) ->
-    for (numOpenTags in 1..numTags) {
-      probabilities.forEach { probability ->
-        runExperimentWithConfig(
-            numOpenTags = numOpenTags,
-            numClosedTags = numTags - numOpenTags,
-            sampleSize = sampleSize,
-            probability = probability)
-      }
+    probabilities.forEach { probability ->
+      runExperimentWithConfig(
+          numOpenTags = numTags,
+          numClosedTags = 0,
+          sampleSize = sampleSize,
+          probability = probability)
     }
   }
 }
