@@ -62,11 +62,14 @@ fun main() {
       if (probability == .2 && numTags >= 14)
         continue
 
-      runExperimentWithConfig(
-        numOpenTags = numTags,
-        numClosedTags = 0,
-        sampleSize = sampleSize,
-        probability = probability)
+      for (numClosedTags in 0..< numTags) {
+        runExperimentWithConfig(
+          numOpenTags = numTags - numClosedTags,
+          numClosedTags = numClosedTags,
+          sampleSize = sampleSize,
+          probability = probability
+        )
+      }
     }
   }
 }
