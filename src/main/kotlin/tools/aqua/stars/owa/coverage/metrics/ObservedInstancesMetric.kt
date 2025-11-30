@@ -262,7 +262,7 @@ class ObservedInstancesMetric(val sampleSize: Int = 1, val maxSize: Int, val ide
   }
 
   private fun writeData() {
-    val xValues = List(certainInstanceCount.size) { it * sampleSize }
+    val xValues = List(certainInstanceCount.size) { (it+1) * sampleSize }
 
     val values: Map<String, Pair<List<Int>, List<Int>>> =
         mapOf(
