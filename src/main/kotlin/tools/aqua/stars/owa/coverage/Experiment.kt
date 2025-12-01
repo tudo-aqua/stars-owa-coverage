@@ -54,8 +54,17 @@ fun main() {
           15 to 10_000,
       )
 
-  val probabilities = listOf(.05, .10, .15, .20)
+  for(i in 0 .. 10) {
+    runExperimentWithConfig(
+      numOpenTags = 10,
+      numClosedTags = i,
+      sampleSize = 1000,
+      probability = 0.05,
+      prefix = "gap_"
+    )
+  }
 
+  val probabilities = listOf(.05, .10, .15, .20)
   tagsAndSampleSize.forEach { (numTags, sampleSize) ->
     for(probability in probabilities) {
 
@@ -71,16 +80,6 @@ fun main() {
         )
       }
     }
-  }
-
-  for(i in 0 .. 10) {
-    runExperimentWithConfig(
-      numOpenTags = 10,
-      numClosedTags = i,
-      sampleSize = 1000,
-      probability = 0.05,
-      prefix = "gap_"
-    )
   }
 }
 
