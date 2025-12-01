@@ -51,7 +51,7 @@ fun main() {
           12 to 1000,
           13 to 10_000,
           14 to 10_000,
-          15 to 100_000,
+          15 to 10_000,
       )
 
   val probabilities = listOf(.05, .10, .15, .20)
