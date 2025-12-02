@@ -32,54 +32,61 @@ import tools.aqua.stars.owa.coverage.metrics.ObservedInstancesMetric
 const val EXPERIMENT_SEED = 10101L
 val random = Random(EXPERIMENT_SEED)
 
-fun main() {
+val probabilities = listOf(.05, .10, .15, .20)
+
+val tagsAndSampleSize =
+  listOf(
+    1 to 1,
+    2 to 1,
+    3 to 1,
+    4 to 1,
+    5 to 1,
+    6 to 1,
+    7 to 1,
+    8 to 10,
+    9 to 100,
+    10 to 1000,
+    11 to 1000,
+    12 to 1000,
+    13 to 10_000,
+    14 to 10_000,
+    15 to 10_000,
+  )
+
+fun main(args: Array<String>) {
+  check(args.isNotEmpty()) { "Please provide an experiment to run." }
+
   ApplicationConstantsHolder.logFolder = "/tmp/data"
 
-  val tagsAndSampleSize =
-      listOf(
-          1 to 1,
-          2 to 1,
-          3 to 1,
-          4 to 1,
-          5 to 1,
-          6 to 1,
-          7 to 1,
-          8 to 10,
-          9 to 100,
-          10 to 1000,
-          11 to 1000,
-          12 to 1000,
-          13 to 10_000,
-          14 to 10_000,
-          15 to 10_000,
-      )
+  when(args[0]) {
+    "Coverage" ->
+      tagsAndSampleSize.forEach { (numTags, sampleSize) ->
+        for(probability in probabilities) {
 
-  val probabilities = listOf(.05, .10, .15, .20)
+          if (probability == .2 && numTags >= 14)
+            continue
 
-  tagsAndSampleSize.forEach { (numTags, sampleSize) ->
-    for(probability in probabilities) {
+          for (numClosedTags in 0..< numTags) {
+            runExperimentWithConfig(
+              numOpenTags = numTags - numClosedTags,
+              numClosedTags = numClosedTags,
+              sampleSize = sampleSize,
+              probability = probability
+            )
+          }
+        }
+      }
 
-      if (probability == .2 && numTags >= 14)
-        continue
-
-      for (numClosedTags in 0..< numTags) {
+    "Gap" ->
+      for(i in 0 .. 10) {
         runExperimentWithConfig(
-          numOpenTags = numTags - numClosedTags,
-          numClosedTags = numClosedTags,
-          sampleSize = sampleSize,
-          probability = probability
+          numOpenTags = 10,
+          numClosedTags = i,
+          sampleSize = 1000,
+          probability = 0.05,
+          prefix = "gap_"
         )
       }
-    }
-  }
-
-  for(i in 0 .. 10) {
-    runExperimentWithConfig(
-      numOpenTags = 10,
-      numClosedTags = i,
-      sampleSize = 1000,
-      probability = 0.05,
-    )
   }
 }
 
@@ -96,9 +103,10 @@ private fun runExperimentWithConfig(
     numClosedTags: Int,
     sampleSize: Int,
     probability: Double,
+    prefix: String = "",
 ) {
   val numTags = numOpenTags + numClosedTags
-  val identifier = "no=${numOpenTags}_nc=${numClosedTags}_p=${probability}"
+  val identifier = "${prefix}no=${numOpenTags}_nc=${numClosedTags}_p=${probability}"
 
   println(
       "Running random experiment with configuration: numOpenTags=$numOpenTags, numClosedTags=$numClosedTags, probability:$probability, sampleSize=$sampleSize")
