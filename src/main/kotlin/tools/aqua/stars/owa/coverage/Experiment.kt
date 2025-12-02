@@ -79,7 +79,6 @@ fun main() {
       numClosedTags = i,
       sampleSize = 1000,
       probability = 0.05,
-      prefix = "gap_"
     )
   }
 }
@@ -97,7 +96,6 @@ private fun runExperimentWithConfig(
     numClosedTags: Int,
     sampleSize: Int,
     probability: Double,
-    prefix: String = "",
 ) {
   val numTags = numOpenTags + numClosedTags
   val identifier = "no=${numOpenTags}_nc=${numClosedTags}_p=${probability}"
